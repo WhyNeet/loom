@@ -48,3 +48,20 @@ pub fn operation_extractor_works() {
     assert!(o4.is_some());
     assert_eq!(o4.as_ref().unwrap(), "*");
 }
+
+#[test]
+pub fn punctuation_extractor_works() {
+    let string = "012345;7{9}";
+
+    let p1 = extractors::extract_punctuation(&string[6..]);
+    assert!(p1.is_some());
+    assert_eq!(p1.as_ref().unwrap(), ";");
+
+    let p2 = extractors::extract_punctuation(&string[8..]);
+    assert!(p2.is_some());
+    assert_eq!(p2.as_ref().unwrap(), "{");
+
+    let p3 = extractors::extract_punctuation(&string[10..]);
+    assert!(p3.is_some());
+    assert_eq!(p3.as_ref().unwrap(), "}");
+}
