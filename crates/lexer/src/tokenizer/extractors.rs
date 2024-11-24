@@ -1,3 +1,5 @@
+use super::keywords::KEYWORDS;
+
 pub fn extract_number(input: &str) -> String {
     let mut chars = input.chars().peekable();
     let mut number = String::new();
@@ -15,4 +17,14 @@ pub fn extract_number(input: &str) -> String {
     }
 
     number
+}
+
+pub fn extract_keyword(input: &str) -> Option<String> {
+    for keyword in KEYWORDS {
+        if input.starts_with(keyword) {
+            return Some(keyword.to_string());
+        }
+    }
+
+    None
 }
