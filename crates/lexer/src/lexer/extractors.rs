@@ -30,16 +30,20 @@ pub fn extract_keyword(input: &str) -> Option<String> {
     }
 }
 
+const OPERATORS: &[&str] = &["+", "-", "*", "/", "="];
+
 pub fn extract_operator(input: &str) -> Option<String> {
-    if ["+", "-", "*", "/", "="].contains(&&input[0..1]) {
+    if OPERATORS.contains(&&input[0..1]) {
         Some(input[0..1].to_string())
     } else {
         None
     }
 }
 
+const PUNCTUATION: &[&str] = &["{", "}", ";"];
+
 pub fn extract_punctuation(input: &str) -> Option<char> {
-    if ["{", "}", ";"].contains(&&input[0..1]) {
+    if PUNCTUATION.contains(&&input[0..1]) {
         Some(input.as_bytes()[0] as char)
     } else {
         None
@@ -67,6 +71,23 @@ pub fn extract_string(input: &str) -> String {
     input[1..string_end.unwrap_or(input.len())].to_string()
 }
 
-pub fn extract_type(input: &str) -> Option<Type> {
-    Type::from(input.split_once(' ').map(|(l, _)| l).unwrap_or(input))
+pub fn extract_type(input: &str) -> Option<(Type, usize)> {
+    let input = input.split_once(' ').map(|(l, _)| l).unwrap_or(input);
+
+    Type::from(input).map(|t| (t, input.len()))
+}
+
+pub fn extract_identifier(input: &str) -> String {
+    let mut ident = String::new();
+    let mut chars = input.chars().peekable();
+
+    while let Some(char) = chars.next() {
+        if !char.is_ascii_alphabetic() {
+            break;
+        }
+
+        ident.push(char);
+    }
+
+    ident
 }
