@@ -29,3 +29,11 @@ pub fn extract_keyword(input: &str) -> Option<String> {
         None
     }
 }
+
+pub fn extract_operator(input: &str) -> Option<String> {
+    if ["+", "-", "*", "/"].contains(&&input[0..1]) {
+        Some(input[0..1].to_string())
+    } else {
+        None
+    }
+}
