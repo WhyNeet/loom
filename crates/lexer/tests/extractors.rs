@@ -55,13 +55,27 @@ pub fn punctuation_extractor_works() {
 
     let p1 = extractors::extract_punctuation(&string[6..]);
     assert!(p1.is_some());
-    assert_eq!(p1.as_ref().unwrap(), ";");
+    assert_eq!(&p1.unwrap().to_string(), ";");
 
     let p2 = extractors::extract_punctuation(&string[8..]);
     assert!(p2.is_some());
-    assert_eq!(p2.as_ref().unwrap(), "{");
+    assert_eq!(&p2.unwrap().to_string(), "{");
 
     let p3 = extractors::extract_punctuation(&string[10..]);
     assert!(p3.is_some());
-    assert_eq!(p3.as_ref().unwrap(), "}");
+    assert_eq!(&p3.unwrap().to_string(), "}");
+}
+
+#[test]
+pub fn comment_extrator_works() {
+    let string = r#"// this is a comment
+    hello /* another comment */ world"#;
+
+    let c1 = extractors::extract_comment(string);
+    assert!(c1.is_some());
+    assert_eq!(c1.as_ref().unwrap(), " this is a comment");
+
+    let c2 = extractors::extract_comment(&string[31..]);
+    assert!(c2.is_some());
+    assert_eq!(c2.as_ref().unwrap(), " another comment ");
 }
