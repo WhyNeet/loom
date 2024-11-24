@@ -61,3 +61,8 @@ pub fn extract_comment(input: &str) -> Option<String> {
         None
     }
 }
+
+pub fn extract_string(input: &str) -> Option<String> {
+    let string_end = &input[1..].find('"').map(|idx| idx + 1);
+    Some(input[1..string_end.unwrap_or(input.len())].to_string())
+}
