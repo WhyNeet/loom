@@ -31,16 +31,32 @@ pub fn extract_keyword(input: &str) -> Option<String> {
 }
 
 pub fn extract_operator(input: &str) -> Option<String> {
-    if ["+", "-", "*", "/"].contains(&&input[0..1]) {
+    if ["+", "-", "*", "/", "="].contains(&&input[0..1]) {
         Some(input[0..1].to_string())
     } else {
         None
     }
 }
 
-pub fn extract_punctuation(input: &str) -> Option<String> {
+pub fn extract_punctuation(input: &str) -> Option<char> {
     if ["{", "}", ";"].contains(&&input[0..1]) {
-        Some(input[0..1].to_string())
+        Some(input.as_bytes()[0] as char)
+    } else {
+        None
+    }
+}
+
+pub fn extract_comment(input: &str) -> Option<String> {
+    if input.starts_with("//") {
+        let newline_pos = input.find('\n');
+        Some(input[2..newline_pos.unwrap_or(input.len())].to_string())
+    } else if input.starts_with("/*") {
+        let comment_end = input.find("*/");
+        if comment_end.is_none() {
+            None
+        } else {
+            Some(input[2..comment_end.unwrap()].to_string())
+        }
     } else {
         None
     }
