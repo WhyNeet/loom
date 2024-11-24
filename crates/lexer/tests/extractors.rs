@@ -94,5 +94,24 @@ pub fn type_extractor_works() {
 
     let t1 = extractors::extract_type(string);
     assert!(t1.is_some());
-    assert_eq!(t1.unwrap(), Type::UInt32);
+    assert_eq!(t1.unwrap().0, Type::UInt32);
+}
+
+#[test]
+pub fn identifier_extractor_works() {
+    let string = "let x = a + b / 2;";
+
+    let i1 = extractors::extract_identifier(&string[4..]);
+    assert_eq!(i1, "x");
+
+    let i2 = extractors::extract_identifier(&string[8..]);
+    assert_eq!(i2, "a");
+
+    let i3 = extractors::extract_identifier(&string[12..]);
+    assert_eq!(i3, "b");
+
+    let string = "let var;able = 5;";
+
+    let i4 = extractors::extract_identifier(&string[4..]);
+    assert_eq!(i4, "var");
 }
