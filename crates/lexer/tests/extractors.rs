@@ -73,11 +73,11 @@ pub fn comment_extrator_works() {
 
     let c1 = extractors::extract_comment(string);
     assert!(c1.is_some());
-    assert_eq!(c1.as_ref().unwrap(), " this is a comment");
+    assert_eq!(c1.as_ref().unwrap(), "// this is a comment");
 
     let c2 = extractors::extract_comment(&string[31..]);
     assert!(c2.is_some());
-    assert_eq!(c2.as_ref().unwrap(), " another comment ");
+    assert_eq!(c2.as_ref().unwrap(), "/* another comment */");
 }
 
 #[test]
