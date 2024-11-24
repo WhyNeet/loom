@@ -20,11 +20,12 @@ pub fn extract_number(input: &str) -> String {
 }
 
 pub fn extract_keyword(input: &str) -> Option<String> {
-    for keyword in KEYWORDS {
-        if input.starts_with(keyword) {
-            return Some(keyword.to_string());
-        }
-    }
+    let split = input.split_once(' ');
+    let string = split.map(|(left, _)| left).unwrap_or(input);
 
-    None
+    if KEYWORDS.contains(&string) {
+        Some(string.to_string())
+    } else {
+        None
+    }
 }
