@@ -79,3 +79,12 @@ pub fn comment_extrator_works() {
     assert!(c2.is_some());
     assert_eq!(c2.as_ref().unwrap(), " another comment ");
 }
+
+#[test]
+pub fn string_extractor_works() {
+    let string = r#"let a = "hello, world";"#;
+
+    let s1 = extractors::extract_string(&string[8..]);
+    assert!(s1.is_some());
+    assert_eq!(s1.as_ref().unwrap(), "hello, world");
+}
