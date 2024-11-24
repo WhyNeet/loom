@@ -1,8 +1,10 @@
+use super::types::Type;
+
 #[derive(Debug)]
 pub enum Token {
     Keyword(String),
     Identifier(String),
-    Type(String),
+    Type(Type),
     Literal(Literal),
     Operator(String),
     Punctuation(char),

@@ -1,4 +1,4 @@
-use super::keywords::KEYWORDS;
+use super::{keywords::KEYWORDS, types::Type};
 
 pub fn extract_number(input: &str) -> String {
     let mut chars = input.chars().peekable();
@@ -65,4 +65,8 @@ pub fn extract_comment(input: &str) -> Option<String> {
 pub fn extract_string(input: &str) -> String {
     let string_end = &input[1..].find('"').map(|idx| idx + 1);
     input[1..string_end.unwrap_or(input.len())].to_string()
+}
+
+pub fn extract_type(input: &str) -> Option<Type> {
+    Type::from(input.split_once(' ').map(|(l, _)| l).unwrap_or(input))
 }
