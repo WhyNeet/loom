@@ -1,4 +1,4 @@
-use lexer::lexer::extractors;
+use lexer::lexer::{extractors, types::Type};
 
 #[test]
 pub fn number_extractor_works() {
@@ -85,6 +85,14 @@ pub fn string_extractor_works() {
     let string = r#"let a = "hello, world";"#;
 
     let s1 = extractors::extract_string(&string[8..]);
-    assert!(s1.is_some());
-    assert_eq!(s1.as_ref().unwrap(), "hello, world");
+    assert_eq!(&s1, "hello, world");
+}
+
+#[test]
+pub fn type_extractor_works() {
+    let string = "u32";
+
+    let t1 = extractors::extract_type(string);
+    assert!(t1.is_some());
+    assert_eq!(t1.unwrap(), Type::UInt32);
 }
