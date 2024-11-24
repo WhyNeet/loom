@@ -53,13 +53,13 @@ pub fn extract_punctuation(input: &str) -> Option<char> {
 pub fn extract_comment(input: &str) -> Option<String> {
     if input.starts_with("//") {
         let newline_pos = input.find('\n');
-        Some(input[2..newline_pos.unwrap_or(input.len())].to_string())
+        Some(input[..newline_pos.unwrap_or(input.len())].to_string())
     } else if input.starts_with("/*") {
         let comment_end = input.find("*/");
         if comment_end.is_none() {
             None
         } else {
-            Some(input[2..comment_end.unwrap()].to_string())
+            Some(input[..comment_end.map(|end| end + 2).unwrap()].to_string())
         }
     } else {
         None

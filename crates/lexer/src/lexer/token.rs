@@ -1,6 +1,6 @@
 use super::types::Type;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Token {
     Keyword(String),
     Identifier(String),
@@ -10,11 +10,10 @@ pub enum Token {
     Punctuation(char),
     Whitespace,
     Comment(String),
-    NewLine,
     EOF,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Literal {
     String(String),
     Number(String),
