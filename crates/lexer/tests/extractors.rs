@@ -1,4 +1,4 @@
-use lexer::tokenizer::extractors;
+use lexer::lexer::extractors;
 
 #[test]
 pub fn number_extractor_works() {
