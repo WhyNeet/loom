@@ -27,3 +27,24 @@ pub fn keyword_extractor_works() {
     assert!(k3.is_some());
     assert_eq!(k3.as_ref().unwrap(), "else");
 }
+
+#[test]
+pub fn operation_extractor_works() {
+    let string = "1234.56 + 33 - 5 / 6 * 2";
+
+    let o1 = extractors::extract_operator(&string[8..]);
+    assert!(o1.is_some());
+    assert_eq!(o1.as_ref().unwrap(), "+");
+
+    let o2 = extractors::extract_operator(&string[13..]);
+    assert!(o2.is_some());
+    assert_eq!(o2.as_ref().unwrap(), "-");
+
+    let o3 = extractors::extract_operator(&string[17..]);
+    assert!(o3.is_some());
+    assert_eq!(o3.as_ref().unwrap(), "/");
+
+    let o4 = extractors::extract_operator(&string[21..]);
+    assert!(o4.is_some());
+    assert_eq!(o4.as_ref().unwrap(), "*");
+}
