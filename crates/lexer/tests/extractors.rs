@@ -90,7 +90,7 @@ pub fn string_extractor_works() {
 
 #[test]
 pub fn type_extractor_works() {
-    let string = "u32";
+    let string = "u32-=";
 
     let t1 = extractors::extract_type(string);
     assert!(t1.is_some());
