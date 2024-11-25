@@ -30,17 +30,19 @@ pub fn extract_keyword(input: &str) -> Option<String> {
     }
 }
 
-const OPERATORS: &[&str] = &["+", "-", "*", "/", "="];
+const OPERATORS: &[&str] = &["+", "-", "*", "/", "=", ">=", "<=", "<", ">", "==", "!="];
 
 pub fn extract_operator(input: &str) -> Option<String> {
-    if OPERATORS.contains(&&input[0..1]) {
+    if OPERATORS.contains(&&input[0..2]) {
+        Some(input[0..2].to_string())
+    } else if OPERATORS.contains(&&input[0..1]) {
         Some(input[0..1].to_string())
     } else {
         None
     }
 }
 
-const PUNCTUATION: &[&str] = &["{", "}", ";"];
+const PUNCTUATION: &[&str] = &["{", "}", ";", "(", ")", ".", ","];
 
 pub fn extract_punctuation(input: &str) -> Option<char> {
     if PUNCTUATION.contains(&&input[0..1]) {
