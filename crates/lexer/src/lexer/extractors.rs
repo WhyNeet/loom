@@ -74,7 +74,10 @@ pub fn extract_string(input: &str) -> String {
 }
 
 pub fn extract_type(input: &str) -> Option<(Type, usize)> {
-    let input = input.split_once(' ').map(|(l, _)| l).unwrap_or(input);
+    let input = &input[..input
+        .chars()
+        .position(|c| !c.is_ascii_alphanumeric())
+        .unwrap_or(input.len())];
 
     Type::from(input).map(|t| (t, input.len()))
 }
