@@ -1,4 +1,5 @@
-use super::{keywords::KEYWORDS, types::Type};
+use super::keywords::KEYWORDS;
+use common::types::Type;
 
 pub fn extract_number(input: &str) -> String {
     let mut chars = input.chars().peekable();

@@ -1,4 +1,4 @@
-use super::types::Type;
+use common::types::Type;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Token {
