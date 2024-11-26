@@ -1,4 +1,5 @@
-use lexer::lexer::{extractors, types::Type};
+use common::types::Type;
+use lexer::lexer::extractors;
 
 #[test]
 pub fn number_extractor_works() {
