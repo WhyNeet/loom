@@ -8,7 +8,6 @@ pub enum Token {
     Literal(Literal),
     Operator(String),
     Punctuation(char),
-    Whitespace,
     Comment(String),
     EOF,
 }

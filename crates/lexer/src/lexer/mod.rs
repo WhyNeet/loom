@@ -13,7 +13,6 @@ pub fn lexer(input: &str) -> Vec<Token> {
         let char = bytes[pos] as char;
 
         if char.is_whitespace() {
-            tokens.push(Token::Whitespace);
             pos += 1;
         } else if char == '\n' {
             pos += 1;
