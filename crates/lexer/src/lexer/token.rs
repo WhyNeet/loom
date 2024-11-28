@@ -1,6 +1,6 @@
 use common::types::Type;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Token {
     Keyword(String),
     Identifier(String),
@@ -12,7 +12,7 @@ pub enum Token {
     EOF,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Literal {
     String(String),
     Number(String),

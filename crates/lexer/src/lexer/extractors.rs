@@ -43,7 +43,7 @@ pub fn extract_operator(input: &str) -> Option<String> {
     }
 }
 
-const PUNCTUATION: &[&str] = &["{", "}", ";", "(", ")", ".", ","];
+const PUNCTUATION: &[&str] = &["{", "}", ";", "(", ")", ".", ",", ":"];
 
 pub fn extract_punctuation(input: &str) -> Option<char> {
     if PUNCTUATION.contains(&&input[0..1]) {
