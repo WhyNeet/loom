@@ -43,6 +43,7 @@ pub enum Declaration {
 #[derive(Debug)]
 pub enum Statement {
     Return(Block),
+    ControlFlow { condition: Block, execute: Block },
 }
 
 #[derive(Debug)]
