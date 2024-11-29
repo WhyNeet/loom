@@ -31,7 +31,10 @@ pub fn extract_keyword(input: &str) -> Option<String> {
     }
 }
 
-const OPERATORS: &[&str] = &["+", "-", "*", "/", "=", ">=", "<=", "<", ">", "==", "!="];
+const OPERATORS: &[&str] = &[
+    "+", "-", "*", "/", "=", ">=", "<=", "<", ">", "==", "!=", "||", "&&", "&", "|", ">>", "<<",
+    "+=", "-=", "*=", "/=",
+];
 
 pub fn extract_operator(input: &str) -> Option<String> {
     if input.len() > 1 && OPERATORS.contains(&&input[0..2]) {
