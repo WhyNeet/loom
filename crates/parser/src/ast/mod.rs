@@ -88,6 +88,7 @@ impl Literal {
 pub enum Operation {
     Algebraic(AlgebraicOperation),
     Logical(LogicalOperation),
+    Assignment(AssignmentOperation),
 }
 
 impl Operation {
@@ -95,6 +96,29 @@ impl Operation {
         AlgebraicOperation::from_str(value)
             .map(|alg| Self::Algebraic(alg))
             .or(LogicalOperation::from_str(value).map(|log| Self::Logical(log)))
+            .or(AssignmentOperation::from_str(value).map(|assign| Self::Assignment(assign)))
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum AssignmentOperation {
+    Assign,
+    AdditionAssign,
+    SubtractionAssign,
+    MultiplicationAssign,
+    DivisionAssign,
+}
+
+impl AssignmentOperation {
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "=" => Some(Self::Assign),
+            "+=" => Some(Self::AdditionAssign),
+            "-=" => Some(Self::SubtractionAssign),
+            "/=" => Some(Self::DivisionAssign),
+            "*=" => Some(Self::MultiplicationAssign),
+            _ => None,
+        }
     }
 }
 
@@ -179,6 +203,9 @@ impl PartialOrd for Operation {
             (Operation::Logical(_), Operation::Algebraic(_)) => Some(std::cmp::Ordering::Less),
             (Operation::Algebraic(op1), Operation::Algebraic(op2)) => op1.partial_cmp(op2),
             (Operation::Logical(log1), Operation::Logical(log2)) => log1.partial_cmp(log2),
+            (Operation::Assignment(_), Operation::Assignment(_)) => Some(std::cmp::Ordering::Equal),
+            (Operation::Assignment(_), _) => Some(std::cmp::Ordering::Less),
+            (_, Operation::Assignment(_)) => Some(std::cmp::Ordering::Greater),
         }
     }
 }
