@@ -79,12 +79,32 @@ pub enum Operation {
     Logical(LogicalOperation),
 }
 
+impl Operation {
+    pub fn from_str(value: &str) -> Option<Self> {
+        AlgebraicOperation::from_str(value)
+            .map(|alg| Self::Algebraic(alg))
+            .or(LogicalOperation::from_str(value).map(|log| Self::Logical(log)))
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum AlgebraicOperation {
     Addition,
     Subtraction,
     Multiplication,
     Division,
+}
+
+impl AlgebraicOperation {
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "+" => Some(Self::Addition),
+            "-" => Some(Self::Subtraction),
+            "*" => Some(Self::Multiplication),
+            "/" => Some(Self::Division),
+            _ => None,
+        }
+    }
 }
 
 impl PartialOrd for AlgebraicOperation {
@@ -115,6 +135,21 @@ pub enum LogicalOperation {
     Less = 2,
     Or = 1,
     And = 0,
+}
+
+impl LogicalOperation {
+    pub fn from_str(value: &str) -> Option<Self> {
+        match value {
+            "==" => Some(Self::Equal),
+            ">=" => Some(Self::GreaterOrEqual),
+            "<=" => Some(Self::LessOrEqual),
+            ">" => Some(Self::Greater),
+            "<" => Some(Self::Less),
+            "||" => Some(Self::Or),
+            "&&" => Some(Self::And),
+            _ => None,
+        }
+    }
 }
 
 impl PartialOrd for LogicalOperation {
