@@ -1,4 +1,5 @@
 use common::types::Type;
+use lexer::lexer;
 
 #[derive(Debug)]
 pub struct AbstractSyntaxTree {
@@ -54,6 +55,7 @@ pub enum Expression {
         operation: Operation,
     },
     Literal(Literal),
+    Identifier(String),
 }
 
 #[derive(Debug)]
@@ -71,6 +73,15 @@ pub enum Literal {
     Float64(f64),
     Bool(bool),
     Char(char),
+}
+
+impl Literal {
+    pub fn from_literal_token(value: &lexer::token::Literal) -> Self {
+        match value {
+            lexer::token::Literal::String(string) => Self::String(string.clone()),
+            lexer::token::Literal::Number(num_str) => Self::Int32(num_str.parse().unwrap()),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
