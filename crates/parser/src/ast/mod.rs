@@ -18,14 +18,14 @@ impl AbstractSyntaxTree {
 
 pub type Block = Vec<ASTUnit>;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ASTUnit {
     Declaration(Declaration),
     Statement(Statement),
     Expression(Expression),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Declaration {
     // TypeDeclaration, // not implemented yet
     VariableDeclaration {
@@ -41,13 +41,13 @@ pub enum Declaration {
     },
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Statement {
     Return(Block),
     ControlFlow { condition: Block, execute: Block },
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expression {
     BinaryExpression {
         left: Block,
@@ -58,7 +58,7 @@ pub enum Expression {
     Identifier(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Literal {
     String(String),
     Int8(i8),
@@ -183,7 +183,7 @@ impl PartialOrd for Operation {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum VariableDeclarationKeyword {
     Const,
     Let,
