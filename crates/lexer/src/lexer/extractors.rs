@@ -34,7 +34,7 @@ pub fn extract_keyword(input: &str) -> Option<String> {
 const OPERATORS: &[&str] = &["+", "-", "*", "/", "=", ">=", "<=", "<", ">", "==", "!="];
 
 pub fn extract_operator(input: &str) -> Option<String> {
-    if OPERATORS.contains(&&input[0..2]) {
+    if input.len() > 1 && OPERATORS.contains(&&input[0..2]) {
         Some(input[0..2].to_string())
     } else if OPERATORS.contains(&&input[0..1]) {
         Some(input[0..1].to_string())
