@@ -1,5 +1,5 @@
 pub fn traverse_till_root_par<T: PartialEq>(input: &[T], parentheses: (T, T)) -> Option<usize> {
-    let mut stack = Vec::new();
+    let mut count = 0;
     let mut pos = 0;
 
     while pos < input.len() {
@@ -10,15 +10,13 @@ pub fn traverse_till_root_par<T: PartialEq>(input: &[T], parentheses: (T, T)) ->
             continue;
         }
 
-        if stack.is_empty() || stack.last().unwrap() == &token {
-            stack.push(token)
-        } else if stack.last().unwrap() == &&parentheses.0 && token == &parentheses.1 {
-            stack.pop();
-            if stack.is_empty() {
+        if token == &parentheses.1 {
+            count -= 1;
+            if count == 0 {
                 return Some(pos);
             }
-        } else if stack.last().unwrap() == &&parentheses.1 && token == &parentheses.0 {
-            stack.push(token)
+        } else if token == &parentheses.0 {
+            count += 1;
         }
 
         pos += 1;
