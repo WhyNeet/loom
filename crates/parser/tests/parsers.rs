@@ -1,6 +1,11 @@
 use lexer::lexer::lexer;
 use parser::{
-    ast::{ASTUnit, Expression},
+    ast::{
+        expression::Expression,
+        literal::Literal,
+        operation::{AlgebraicOperation, LogicalOperation, Operation},
+        unit::ASTUnit,
+    },
     parser::parsers,
 };
 
@@ -17,32 +22,22 @@ pub fn expression_parser_works() {
             left: vec![ASTUnit::Expression(Expression::BinaryExpression {
                 left: vec![ASTUnit::Expression(Expression::BinaryExpression {
                     left: vec![ASTUnit::Expression(Expression::BinaryExpression {
-                        left: vec![ASTUnit::Expression(Expression::Literal(
-                            parser::ast::Literal::Int32(1),
-                        ))],
-                        right: vec![ASTUnit::Expression(Expression::Literal(
-                            parser::ast::Literal::Int32(2),
-                        ))],
-                        operation: parser::ast::Operation::Algebraic(
-                            parser::ast::AlgebraicOperation::Addition,
-                        ),
+                        left: vec![ASTUnit::Expression(Expression::Literal(Literal::Int32(1),))],
+                        right: vec![ASTUnit::Expression(Expression::Literal(Literal::Int32(2),))],
+                        operation: Operation::Algebraic(AlgebraicOperation::Addition,),
                     })],
-                    right: vec![ASTUnit::Expression(Expression::Literal(
-                        parser::ast::Literal::Int32(3),
-                    ))],
-                    operation: parser::ast::Operation::Algebraic(
-                        parser::ast::AlgebraicOperation::Multiplication,
-                    ),
+                    right: vec![ASTUnit::Expression(Expression::Literal(Literal::Int32(3),))],
+                    operation: Operation::Algebraic(AlgebraicOperation::Multiplication,),
                 })],
                 right: vec![ASTUnit::Expression(Expression::Identifier("x".to_string()))],
-                operation: parser::ast::Operation::Logical(parser::ast::LogicalOperation::Greater),
+                operation: Operation::Logical(LogicalOperation::Greater),
             })],
             right: vec![ASTUnit::Expression(Expression::BinaryExpression {
                 left: vec![ASTUnit::Expression(Expression::Identifier("x".to_string()))],
                 right: vec![ASTUnit::Expression(Expression::Identifier("a".to_string()))],
-                operation: parser::ast::Operation::Logical(parser::ast::LogicalOperation::Greater),
+                operation: Operation::Logical(LogicalOperation::Greater),
             })],
-            operation: parser::ast::Operation::Logical(parser::ast::LogicalOperation::Or),
+            operation: Operation::Logical(LogicalOperation::Or),
         })
     );
     assert_eq!(expr_size, 13);
