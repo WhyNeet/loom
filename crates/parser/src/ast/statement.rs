@@ -1,9 +1,13 @@
-use super::unit::Block;
+use super::unit::{ASTUnit, Block};
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {
     Return(Block),
-    ControlFlow { condition: Block, execute: Block },
+    ControlFlow {
+        condition: Block,
+        execute: Block,
+        alternative: Option<Box<ASTUnit>>,
+    },
     Loop(LoopStatement),
 }
 

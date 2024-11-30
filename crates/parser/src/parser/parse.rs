@@ -11,7 +11,7 @@ use crate::ast::{
 
 use super::parsers;
 
-pub fn parse(tokens: &[Token]) -> Block {
+pub fn parse(tokens: &[Token]) -> (Block, usize) {
     let mut units = Vec::new();
     let mut pos = 0;
 
@@ -97,7 +97,7 @@ pub fn parse(tokens: &[Token]) -> Block {
 
                         pos += condition.len();
 
-                        let condition = parse(condition);
+                        let (condition, _) = parse(condition);
 
                         let block = &tokens[pos..(pos
                             + traversal::traverse_till_root_par(
@@ -113,7 +113,7 @@ pub fn parse(tokens: &[Token]) -> Block {
 
                         pos += block.len();
 
-                        let block = parse(block);
+                        let (block, _) = parse(block);
 
                         ASTUnit::Statement(Statement::Loop(LoopStatement::While {
                             condition,
@@ -149,11 +149,26 @@ pub fn parse(tokens: &[Token]) -> Block {
 
                         pos += block.len();
 
-                        let block = parse(block);
+                        let (block, _) = parse(block);
+
+                        pos += 1;
+
+                        // an else clause is present
+                        let alternative = if tokens[pos] == Token::Keyword("else".to_string()) {
+                            pos += 1;
+                            let (mut statement, size) = parse(&tokens[pos..]);
+
+                            pos += size;
+
+                            Some(Box::new(statement.swap_remove(0)))
+                        } else {
+                            None
+                        };
 
                         ASTUnit::Statement(Statement::ControlFlow {
                             condition: vec![condition],
                             execute: block,
+                            alternative,
                         })
                     }
                     parsers::Keyword::ControlFlowElse => {
@@ -211,7 +226,7 @@ pub fn parse(tokens: &[Token]) -> Block {
                         )
                         .unwrap();
 
-                        let expression = parse(&tokens[pos..(pos + block_end_offset)]);
+                        let (expression, _) = parse(&tokens[pos..(pos + block_end_offset)]);
 
                         pos += block_end_offset;
 
@@ -259,5 +274,5 @@ pub fn parse(tokens: &[Token]) -> Block {
         }
     }
 
-    units
+    (units, pos)
 }
