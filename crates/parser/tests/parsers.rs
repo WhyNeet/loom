@@ -9,7 +9,7 @@ pub fn expression_parser_works() {
     let input = r#"(1 + 2) * 3 > x || x > a"#;
 
     let tokens = lexer(input);
-    let ast = parsers::parse_expression(&tokens);
+    let (ast, expr_size) = parsers::parse_expression(&tokens);
 
     assert_eq!(
         ast,
@@ -45,4 +45,5 @@ pub fn expression_parser_works() {
             operation: parser::ast::Operation::Logical(parser::ast::LogicalOperation::Or),
         })
     );
+    assert_eq!(expr_size, 13);
 }

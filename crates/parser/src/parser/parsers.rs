@@ -1,5 +1,3 @@
-use std::cmp::Ordering;
-
 use common::constants::keywords::{
     DECLARATION_CONSTANT, DECLARATION_FUNCTION, DECLARATION_VARIABLE, STATEMENT_ELSE, STATEMENT_IF,
     STATEMENT_RETURN, STATEMENT_WHILE,
@@ -24,7 +22,7 @@ pub fn parse_keyword(input: &str) -> Option<Keyword> {
         )),
         DECLARATION_FUNCTION => Some(Keyword::FunctionDeclaration),
         DECLARATION_VARIABLE => Some(Keyword::VariableDeclaration(
-            VariableDeclarationKeyword::Const,
+            VariableDeclarationKeyword::Let,
         )),
         STATEMENT_IF => Some(Keyword::ControlFlowIf),
         STATEMENT_ELSE => Some(Keyword::ControlFlowElse),
@@ -34,10 +32,14 @@ pub fn parse_keyword(input: &str) -> Option<Keyword> {
     }
 }
 
-pub fn parse_expression(input: &[Token]) -> ASTUnit {
+/// Returns an AST unit and expression length in tokens
+pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
+    let mut size = 0;
+
     let input = if input[0] == Token::Punctuation('(')
         && input.last().unwrap() == &Token::Punctuation(')')
     {
+        size += 2;
         &input[1..(input.len() - 1)]
     } else {
         input
@@ -77,23 +79,43 @@ pub fn parse_expression(input: &[Token]) -> ASTUnit {
         let (left, right) = input.split_at(idx);
         // ignore lowest operator
         let right = &right[1..];
-        ASTUnit::Expression(Expression::BinaryExpression {
-            left: vec![parse_expression(left)],
-            right: vec![parse_expression(right)],
-            operation: lowest,
-        })
-    } else {
-        let literal_or_ident = input.iter().find(|tok| match tok {
-            Token::Literal(_) | Token::Identifier(_) => true,
-            _ => false,
-        });
 
-        ASTUnit::Expression(match literal_or_ident.unwrap() {
-            Token::Literal(literal) => {
-                Expression::Literal(ast::Literal::from_literal_token(literal))
-            }
-            Token::Identifier(ident) => Expression::Identifier(ident.clone()),
-            _ => unreachable!(),
-        })
+        let (left, left_size) = parse_expression(left);
+        let (right, right_size) = parse_expression(right);
+
+        // left + right + operator
+        size += left_size + right_size + 1;
+
+        (
+            ASTUnit::Expression(Expression::BinaryExpression {
+                left: vec![left],
+                right: vec![right],
+                operation: lowest,
+            }),
+            size,
+        )
+    } else {
+        let literal_or_ident = input
+            .iter()
+            .position(|tok| match tok {
+                Token::Literal(_) | Token::Identifier(_) => true,
+                _ => false,
+            })
+            .unwrap();
+
+        size += literal_or_ident + 1;
+
+        let literal_or_ident = &input[literal_or_ident];
+
+        (
+            ASTUnit::Expression(match literal_or_ident {
+                Token::Literal(literal) => {
+                    Expression::Literal(ast::Literal::from_literal_token(literal))
+                }
+                Token::Identifier(ident) => Expression::Identifier(ident.clone()),
+                _ => unreachable!(),
+            }),
+            size,
+        )
     }
 }
