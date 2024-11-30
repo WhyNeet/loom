@@ -37,6 +37,13 @@ pub fn parse_keyword(input: &str) -> Option<Keyword> {
 
 /// Returns an AST unit and expression length in tokens
 pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
+    if input.len() == 0 {
+        return (
+            ASTUnit::Expression(Expression::Literal(Literal::Int32(0))),
+            0,
+        );
+    }
+
     let mut size = 0;
 
     let input = if input[0] == Token::Punctuation('(')
@@ -49,6 +56,7 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
     };
 
     let mut parentheses_count = 0;
+    let mut braces_count = 0;
 
     let lowest_precedence: Option<(usize, Operation)> =
         input
@@ -56,7 +64,7 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
             .enumerate()
             .fold(None, |acc, (idx, tok)| match tok {
                 Token::Operator(op) => {
-                    if parentheses_count != 0 {
+                    if parentheses_count != 0 || braces_count != 0 {
                         return acc;
                     }
 
@@ -73,6 +81,14 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
                 }
                 Token::Punctuation(')') => {
                     parentheses_count -= 1;
+                    acc
+                }
+                Token::Punctuation('{') => {
+                    braces_count += 1;
+                    acc
+                }
+                Token::Punctuation('}') => {
+                    braces_count -= 1;
                     acc
                 }
                 _ => acc,

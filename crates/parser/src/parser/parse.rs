@@ -132,7 +132,6 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                             .unwrap_or(tokens.len() - pos))];
 
                         let (condition, condition_size) = parsers::parse_expression(condition);
-
                         pos += condition_size;
 
                         let block = &tokens[pos..(pos
