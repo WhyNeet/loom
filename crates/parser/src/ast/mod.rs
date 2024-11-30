@@ -45,6 +45,12 @@ pub enum Declaration {
 pub enum Statement {
     Return(Block),
     ControlFlow { condition: Block, execute: Block },
+    Loop(LoopStatement),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum LoopStatement {
+    While { condition: Block, execute: Block },
 }
 
 #[derive(Debug, PartialEq)]

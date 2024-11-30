@@ -1,7 +1,7 @@
 use common::util::traversal;
 use lexer::lexer::token::Token;
 
-use crate::ast::{ASTUnit, Block, Declaration, Statement};
+use crate::ast::{ASTUnit, Block, Declaration, Expression, LoopStatement, Operation, Statement};
 
 use super::parsers;
 
@@ -21,73 +21,137 @@ pub fn parse(tokens: &[Token]) -> Block {
                         // let or const
                         pos += 1;
 
-                        let identifier = match tokens[pos + 1] {
+                        let identifier = match tokens[pos] {
                             Token::Identifier(ref ident) => ident.clone(),
-                            _ => panic!("expected identfier"),
+                            _ => panic!("expected identifier"),
                         };
 
                         pos += 1;
 
                         match tokens[pos] {
-                            Token::Punctuation('=') => (),
+                            Token::Operator(ref op) => {
+                                if op != "=" {
+                                    panic!("expected '=' after variable identifier")
+                                }
+                            }
                             _ => panic!("expected '=' after variable identifier"),
                         }
 
+                        // assignment operator
                         pos += 1;
 
-                        let expression = &tokens[pos..tokens[pos..]
-                            .iter()
-                            .position(|tok| match tok {
-                                Token::Punctuation(';') => true,
-                                _ => false,
-                            })
-                            .unwrap()];
+                        let expression = &tokens[pos..(pos
+                            + tokens[pos..]
+                                .iter()
+                                .position(|tok| match tok {
+                                    Token::Punctuation(';') => true,
+                                    _ => false,
+                                })
+                                .unwrap())];
 
                         pos += expression.len();
 
-                        let expression = parse(expression);
+                        let expression = parsers::parse_expression(expression);
 
                         ASTUnit::Declaration(Declaration::VariableDeclaration {
                             keyword: decl,
                             identifier,
-                            expression,
+                            expression: vec![expression.0],
                         })
                     }
                     parsers::Keyword::Return => {
                         pos += 1;
 
-                        let expression = &tokens[pos..tokens
-                            .iter()
-                            .skip(pos)
-                            .position(|tok| match tok {
-                                Token::Punctuation(';') => true,
-                                _ => false,
-                            })
-                            .unwrap()];
-                        let expression = parse(expression);
-
+                        let expression = &tokens[pos..(pos
+                            + tokens[pos..]
+                                .iter()
+                                .position(|tok| match tok {
+                                    Token::Punctuation(';') => true,
+                                    _ => false,
+                                })
+                                .unwrap())];
                         pos += expression.len();
 
-                        ASTUnit::Statement(Statement::Return(expression))
+                        let expression = parsers::parse_expression(expression);
+
+                        ASTUnit::Statement(Statement::Return(vec![expression.0]))
                     }
                     parsers::Keyword::While => {
-                        // let condition = &tokens[pos..tokens
-                        //     .iter()
-                        //     .skip(pos)
-                        //     .position(|tok| {
-                        //         match tok { Token::Punctuation('{') }
-                        //     })
-                        //     .unwrap()];
+                        let condition = &tokens[pos..(pos
+                            + traversal::traverse_till_root_par(
+                                &tokens[pos..],
+                                (Token::Punctuation('{'), Token::Punctuation('}')),
+                            )
+                            .unwrap_or(
+                                tokens
+                                    .iter()
+                                    .position(|tok| tok == &Token::Punctuation('{'))
+                                    .unwrap(),
+                            ))];
 
-                        // pos += condition.len();
+                        pos += condition.len();
 
-                        // let condition = parse(condition);
+                        let condition = parse(condition);
 
-                        // let block =
-                        panic!("while not implemented for now")
+                        let block = &tokens[pos..(pos
+                            + traversal::traverse_till_root_par(
+                                &tokens[pos..],
+                                (Token::Punctuation('{'), Token::Punctuation('}')),
+                            )
+                            .unwrap_or(
+                                tokens
+                                    .iter()
+                                    .position(|tok| tok == &Token::Punctuation('}'))
+                                    .unwrap(),
+                            ))];
+
+                        pos += block.len();
+
+                        let block = parse(block);
+
+                        ASTUnit::Statement(Statement::Loop(LoopStatement::While {
+                            condition,
+                            execute: block,
+                        }))
                     }
-                    parsers::Keyword::ControlFlowIf | parsers::Keyword::ControlFlowElse => {
-                        panic!("if-else not implemented for now")
+                    parsers::Keyword::ControlFlowIf => {
+                        // if keyword
+                        pos += 1;
+
+                        let condition = &tokens[pos..(pos
+                            + traversal::traverse_till_root_par(
+                                &tokens[pos..],
+                                (Token::Punctuation('{'), Token::Punctuation('}')),
+                            )
+                            .unwrap_or(tokens.len() - pos))];
+
+                        let (condition, condition_size) = parsers::parse_expression(condition);
+
+                        pos += condition_size;
+
+                        let block = &tokens[pos..(pos
+                            + traversal::traverse_till_root_par(
+                                &tokens[pos..],
+                                (Token::Punctuation('{'), Token::Punctuation('}')),
+                            )
+                            .unwrap_or(
+                                tokens
+                                    .iter()
+                                    .position(|tok| tok == &Token::Punctuation('}'))
+                                    .unwrap(),
+                            ))];
+
+                        pos += block.len();
+
+                        let block = parse(block);
+
+                        ASTUnit::Statement(Statement::ControlFlow {
+                            condition: vec![condition],
+                            execute: block,
+                        })
+                    }
+                    parsers::Keyword::ControlFlowElse => {
+                        todo!()
                     }
                     parsers::Keyword::FunctionDeclaration => {
                         // fun keyword
@@ -152,6 +216,35 @@ pub fn parse(tokens: &[Token]) -> Block {
                             expression,
                         })
                     }
+                };
+
+                units.push(unit);
+            }
+            Token::Identifier(ident) => {
+                // this is probably an assignment or function call
+
+                pos += 1;
+
+                let unit = match &tokens[pos] {
+                    Token::Operator(op) => {
+                        let operation = Operation::from_str(&op).unwrap();
+                        pos += 1;
+                        let expression = &tokens[pos..(pos
+                            + tokens[pos..]
+                                .iter()
+                                .position(|tok| tok == &Token::Punctuation(';'))
+                                .unwrap_or(tokens.len() - pos))];
+                        pos += expression.len();
+                        let expression = parsers::parse_expression(expression);
+                        ASTUnit::Expression(Expression::BinaryExpression {
+                            left: vec![ASTUnit::Expression(Expression::Identifier(
+                                ident.to_string(),
+                            ))],
+                            right: vec![expression.0],
+                            operation,
+                        })
+                    }
+                    _ => panic!("not implemented"),
                 };
 
                 units.push(unit);
