@@ -1,7 +1,13 @@
 use common::util::traversal;
 use lexer::lexer::token::Token;
 
-use crate::ast::{ASTUnit, Block, Declaration, Expression, LoopStatement, Operation, Statement};
+use crate::ast::{
+    declaration::Declaration,
+    expression::Expression,
+    operation::Operation,
+    statement::{LoopStatement, Statement},
+    unit::{ASTUnit, Block},
+};
 
 use super::parsers;
 

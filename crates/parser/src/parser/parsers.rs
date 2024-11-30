@@ -4,7 +4,10 @@ use common::constants::keywords::{
 };
 use lexer::lexer::token::Token;
 
-use crate::ast::{self, ASTUnit, Expression, Operation, VariableDeclarationKeyword};
+use crate::ast::{
+    declaration::VariableDeclarationKeyword, expression::Expression, literal::Literal,
+    operation::Operation, unit::ASTUnit,
+};
 
 pub enum Keyword {
     FunctionDeclaration,
@@ -110,7 +113,7 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
         (
             ASTUnit::Expression(match literal_or_ident {
                 Token::Literal(literal) => {
-                    Expression::Literal(ast::Literal::from_literal_token(literal))
+                    Expression::Literal(Literal::from_literal_token(literal))
                 }
                 Token::Identifier(ident) => Expression::Identifier(ident.clone()),
                 _ => unreachable!(),
