@@ -2,6 +2,8 @@ pub mod extractors;
 pub mod keywords;
 pub mod token;
 
+use std::mem;
+
 use token::{Literal, Token};
 
 pub fn lexer(input: &str) -> Vec<Token> {
@@ -41,6 +43,19 @@ pub fn lexer(input: &str) -> Vec<Token> {
 
             let operator = extractors::extract_operator(&input[pos..]);
             if let Some(operator) = operator {
+                if operator == "-"
+                    && tokens.last().is_some()
+                    && mem::discriminant(tokens.last().unwrap())
+                        != mem::discriminant(&Token::Literal(Literal::Number("".to_string())))
+                    && mem::discriminant(tokens.last().unwrap())
+                        != mem::discriminant(&Token::Identifier("".to_string()))
+                {
+                    let number = extractors::extract_number(&input[pos..]);
+                    pos += number.len();
+                    tokens.push(Token::Literal(Literal::Number(number)));
+                    continue;
+                }
+
                 pos += operator.len();
                 tokens.push(Token::Operator(operator));
                 continue;
