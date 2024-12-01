@@ -5,10 +5,17 @@ pub fn extract_number(input: &str) -> String {
     let mut chars = input.chars().peekable();
     let mut number = String::new();
 
-    while chars.peek().is_some() {
-        let char = chars.next().unwrap();
+    if let Some(char) = chars.peek() {
+        if *char == '-' {
+            number.push('-');
+            chars.next();
+        }
+    }
 
-        if char.is_ascii_digit() {
+    while let Some(char) = chars.next() {
+        if char.is_ascii_whitespace() {
+            continue;
+        } else if char.is_ascii_digit() {
             number.push(char);
         } else if char == '.' && chars.peek().is_some() && chars.peek().unwrap().is_ascii_digit() {
             number.push(char);
@@ -17,7 +24,11 @@ pub fn extract_number(input: &str) -> String {
         }
     }
 
-    number
+    if number == "-" {
+        String::new()
+    } else {
+        number
+    }
 }
 
 pub fn extract_keyword(input: &str) -> Option<String> {
@@ -91,7 +102,7 @@ pub fn extract_identifier(input: &str) -> String {
     let mut chars = input.chars().peekable();
 
     while let Some(char) = chars.next() {
-        if !char.is_ascii_alphabetic() {
+        if !char.is_ascii_alphanumeric() {
             break;
         }
 
