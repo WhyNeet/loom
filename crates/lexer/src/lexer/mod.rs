@@ -51,9 +51,11 @@ pub fn lexer(input: &str) -> Vec<Token> {
                         != mem::discriminant(&Token::Identifier("".to_string()))
                 {
                     let number = extractors::extract_number(&input[pos..]);
-                    pos += number.len();
-                    tokens.push(Token::Literal(Literal::Number(number)));
-                    continue;
+                    if number.len() != 0 {
+                        pos += number.len();
+                        tokens.push(Token::Literal(Literal::Number(number)));
+                        continue;
+                    }
                 }
 
                 pos += operator.len();
