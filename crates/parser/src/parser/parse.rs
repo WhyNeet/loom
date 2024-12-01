@@ -46,14 +46,7 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                         // assignment operator
                         pos += 1;
 
-                        let expression = &tokens[pos..(pos
-                            + tokens[pos..]
-                                .iter()
-                                .position(|tok| match tok {
-                                    Token::Punctuation(';') => true,
-                                    _ => false,
-                                })
-                                .unwrap())];
+                        let expression = &tokens[pos..];
 
                         pos += expression.len();
 
@@ -75,6 +68,7 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                                     Token::Punctuation(';') => true,
                                     _ => false,
                                 })
+                                .map(|pos| pos + 1)
                                 .unwrap())];
                         pos += expression.len();
 
@@ -88,6 +82,7 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                                 &tokens[pos..],
                                 (Token::Punctuation('{'), Token::Punctuation('}')),
                             )
+                            .map(|pos| pos + 1)
                             .unwrap_or(
                                 tokens
                                     .iter()
@@ -104,10 +99,12 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                                 &tokens[pos..],
                                 (Token::Punctuation('{'), Token::Punctuation('}')),
                             )
+                            .map(|pos| pos + 1)
                             .unwrap_or(
                                 tokens
                                     .iter()
                                     .position(|tok| tok == &Token::Punctuation('}'))
+                                    .map(|pos| pos + 1)
                                     .unwrap(),
                             ))];
 
@@ -129,6 +126,7 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                                 &tokens[pos..],
                                 (Token::Punctuation('{'), Token::Punctuation('}')),
                             )
+                            .map(|pos| pos + 1)
                             .unwrap_or(tokens.len() - pos))];
 
                         let (condition, condition_size) = parsers::parse_expression(condition);
@@ -139,10 +137,12 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                                 &tokens[pos..],
                                 (Token::Punctuation('{'), Token::Punctuation('}')),
                             )
+                            .map(|pos| pos + 1)
                             .unwrap_or(
                                 tokens
                                     .iter()
                                     .position(|tok| tok == &Token::Punctuation('}'))
+                                    .map(|pos| pos + 1)
                                     .unwrap(),
                             ))];
 
@@ -189,6 +189,7 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                             (Token::Punctuation('('), Token::Punctuation(')')),
                         )
                         .unwrap();
+                        // (
                         pos += 1;
 
                         let parameters = tokens[pos..(pos + args_end_offset - 1)]
@@ -223,6 +224,7 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                             &tokens[pos..],
                             (Token::Punctuation('{'), Token::Punctuation('}')),
                         )
+                        .map(|pos| pos + 1)
                         .unwrap();
 
                         let (expression, _) = parse(&tokens[pos..(pos + block_end_offset)]);
@@ -253,6 +255,7 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                             + tokens[pos..]
                                 .iter()
                                 .position(|tok| tok == &Token::Punctuation(';'))
+                                .map(|pos| pos + 1)
                                 .unwrap_or(tokens.len() - pos))];
                         pos += expression.len();
                         let expression = parsers::parse_expression(expression);

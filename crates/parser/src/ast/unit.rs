@@ -7,4 +7,5 @@ pub enum ASTUnit {
     Declaration(Declaration),
     Statement(Statement),
     Expression(Expression),
+    Block(Block),
 }

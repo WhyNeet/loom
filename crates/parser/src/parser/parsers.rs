@@ -1,6 +1,9 @@
-use common::constants::keywords::{
-    DECLARATION_CONSTANT, DECLARATION_FUNCTION, DECLARATION_VARIABLE, STATEMENT_ELSE, STATEMENT_IF,
-    STATEMENT_RETURN, STATEMENT_WHILE,
+use common::{
+    constants::keywords::{
+        DECLARATION_CONSTANT, DECLARATION_FUNCTION, DECLARATION_VARIABLE, STATEMENT_ELSE,
+        STATEMENT_IF, STATEMENT_RETURN, STATEMENT_WHILE,
+    },
+    util::traversal,
 };
 use lexer::lexer::token::Token;
 
@@ -8,6 +11,8 @@ use crate::ast::{
     declaration::VariableDeclarationKeyword, expression::Expression, literal::Literal,
     operation::Operation, unit::ASTUnit,
 };
+
+use super::parse;
 
 pub enum Keyword {
     FunctionDeclaration,
@@ -54,6 +59,15 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
     } else {
         input
     };
+
+    if input[0] == Token::Punctuation('{') {
+        let end = traversal::traverse_till_root_par(
+            input,
+            (Token::Punctuation('{'), Token::Punctuation('}')),
+        );
+        let (unit, size) = parse(&input[1..(end.unwrap_or(input.len() - 1))]);
+        return (ASTUnit::Block(unit), size);
+    }
 
     let mut parentheses_count = 0;
     let mut braces_count = 0;
