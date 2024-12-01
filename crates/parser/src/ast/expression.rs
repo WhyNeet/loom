@@ -1,4 +1,8 @@
-use super::{literal::Literal, operation::Operation, unit::Block};
+use super::{
+    literal::Literal,
+    operation::Operation,
+    unit::{ASTUnit, Block},
+};
 
 #[derive(Debug, PartialEq)]
 pub enum Expression {
@@ -9,4 +13,8 @@ pub enum Expression {
     },
     Literal(Literal),
     Identifier(String),
+    FunctionInvokation {
+        function_name: String,
+        parameters: Vec<ASTUnit>,
+    },
 }

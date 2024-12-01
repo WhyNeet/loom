@@ -1,3 +1,5 @@
+use std::mem;
+
 use common::{
     constants::keywords::{
         DECLARATION_CONSTANT, DECLARATION_FUNCTION, DECLARATION_VARIABLE, STATEMENT_ELSE,
@@ -60,17 +62,36 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
         input
     };
 
-    if input[0] == Token::Punctuation('{') {
-        let end = traversal::traverse_till_root_par(
-            input,
-            (Token::Punctuation('{'), Token::Punctuation('}')),
-        );
-        let (unit, size) = parse(&input[1..(end.unwrap_or(input.len() - 1))]);
-        return (ASTUnit::Block(unit), size);
+    if let Some(structure) = recognize_structure(input) {
+        match structure {
+            RecognizableStructure::Block((start, end)) => {
+                println!("=> parse block");
+                let (unit, size) = parse(&input[(start + 1)..(end - 1)]);
+                return (ASTUnit::Block(unit), size);
+            }
+            RecognizableStructure::FunctionInvokation((start, end)) => {
+                println!("=> parse function invokation");
+                let identifier = input[start].as_identifier().unwrap().to_string();
+                let params: Vec<ASTUnit> = input[(start + 1)..end]
+                    .split(|tok| tok == &Token::Punctuation(','))
+                    .map(|expr| parse_expression(expr))
+                    .map(|(expr, _)| expr)
+                    .collect();
+
+                return (
+                    ASTUnit::Expression(Expression::FunctionInvokation {
+                        function_name: identifier,
+                        parameters: params,
+                    }),
+                    end - start,
+                );
+            }
+        }
     }
 
     let mut parentheses_count = 0;
     let mut braces_count = 0;
+    let mut semicolon_count = 0;
 
     let lowest_precedence: Option<(usize, Operation)> =
         input
@@ -78,7 +99,7 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
             .enumerate()
             .fold(None, |acc, (idx, tok)| match tok {
                 Token::Operator(op) => {
-                    if parentheses_count != 0 || braces_count != 0 {
+                    if parentheses_count != 0 || braces_count != 0 || semicolon_count != 0 {
                         return acc;
                     }
 
@@ -103,6 +124,13 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
                 }
                 Token::Punctuation('}') => {
                     braces_count -= 1;
+                    acc
+                }
+                Token::Punctuation(';') => {
+                    if parentheses_count != 0 || braces_count != 0 {
+                        return acc;
+                    }
+                    semicolon_count += 1;
                     acc
                 }
                 _ => acc,
@@ -150,5 +178,47 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
             }),
             size,
         )
+    }
+}
+
+pub enum RecognizableStructure {
+    Block((usize, usize)),
+    FunctionInvokation((usize, usize)),
+}
+
+pub fn recognize_structure(input: &[Token]) -> Option<RecognizableStructure> {
+    if input[0] == Token::Punctuation('{') {
+        let end = traversal::traverse_till_root_par(
+            input,
+            (Token::Punctuation('{'), Token::Punctuation('}')),
+        )
+        .map(|pos| pos + 1);
+
+        if end.is_none() {
+            return None;
+        }
+
+        let end = end.unwrap();
+
+        Some(RecognizableStructure::Block((0, end)))
+    } else if mem::discriminant(&input[0]) == mem::discriminant(&Token::Identifier("".to_string()))
+        && input.len() > 1
+        && mem::discriminant(&input[1]) == mem::discriminant(&Token::Punctuation('('))
+    {
+        let end = traversal::traverse_till_root_par(
+            input,
+            (Token::Punctuation('('), Token::Punctuation(')')),
+        )
+        .map(|pos| pos + 1);
+
+        if end.is_none() {
+            return None;
+        }
+
+        let end = end.unwrap();
+
+        Some(RecognizableStructure::FunctionInvokation((0, end)))
+    } else {
+        None
     }
 }

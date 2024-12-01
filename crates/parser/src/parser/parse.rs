@@ -48,14 +48,13 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
 
                         let expression = &tokens[pos..];
 
-                        pos += expression.len();
-
-                        let expression = parsers::parse_expression(expression);
+                        let (expression, size) = parsers::parse_expression(expression);
+                        pos += size;
 
                         ASTUnit::Declaration(Declaration::VariableDeclaration {
                             keyword: decl,
                             identifier,
-                            expression: vec![expression.0],
+                            expression: vec![expression],
                         })
                     }
                     parsers::Keyword::Return => {
@@ -149,8 +148,6 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                         pos += block.len();
 
                         let (block, _) = parse(block);
-
-                        pos += 1;
 
                         // an else clause is present
                         let alternative = if tokens[pos] == Token::Keyword("else".to_string()) {
