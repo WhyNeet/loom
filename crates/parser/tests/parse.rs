@@ -4,11 +4,15 @@ use parser::parser;
 #[test]
 pub fn parser_works() {
     let input = r#"
+      fun square(a: i32, b: i32) -> i32 {
+        return a * b;
+      }
+
       fun add(a: i32, b: i32) -> i32 {
-        const sum = a + b;
+        const sum = a + b + { return a * b; };
 
         if sum > 5 {
-          return sum;
+          return square(sum);
         } else if sum > 1 && sum < 3 {
           return -1;
         } else {
