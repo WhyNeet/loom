@@ -1,6 +1,6 @@
 use common::types::Type;
 
-use super::unit::Block;
+use super::unit::ASTUnit;
 
 #[derive(Debug, PartialEq)]
 pub enum Declaration {
@@ -8,13 +8,13 @@ pub enum Declaration {
     VariableDeclaration {
         keyword: VariableDeclarationKeyword,
         identifier: String,
-        expression: Block,
+        expression: Box<ASTUnit>,
     },
     FunctionDeclaration {
         identifier: String,
         parameters: Vec<(String, Type)>,
         return_type: Type,
-        expression: Block,
+        expression: Box<ASTUnit>,
     },
 }
 

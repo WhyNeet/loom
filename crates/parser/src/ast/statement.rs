@@ -4,8 +4,8 @@ use super::unit::{ASTUnit, Block};
 pub enum Statement {
     Return(Block),
     ControlFlow {
-        condition: Block,
-        execute: Block,
+        condition: Box<ASTUnit>,
+        execute: Box<ASTUnit>,
         alternative: Option<Box<ASTUnit>>,
     },
     Loop(LoopStatement),
@@ -13,5 +13,8 @@ pub enum Statement {
 
 #[derive(Debug, PartialEq)]
 pub enum LoopStatement {
-    While { condition: Block, execute: Block },
+    While {
+        condition: Box<ASTUnit>,
+        execute: Box<ASTUnit>,
+    },
 }

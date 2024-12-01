@@ -11,7 +11,7 @@ use crate::ast::{
 
 use super::parsers;
 
-pub fn parse(tokens: &[Token]) -> (Block, usize) {
+pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
     let mut units = Vec::new();
     let mut pos = 0;
 
@@ -54,7 +54,7 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                         ASTUnit::Declaration(Declaration::VariableDeclaration {
                             keyword: decl,
                             identifier,
-                            expression: vec![expression],
+                            expression: Box::new(expression),
                         })
                     }
                     parsers::Keyword::Return => {
@@ -112,8 +112,8 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                         let (block, _) = parse(block);
 
                         ASTUnit::Statement(Statement::Loop(LoopStatement::While {
-                            condition,
-                            execute: block,
+                            condition: Box::new(condition),
+                            execute: Box::new(block),
                         }))
                     }
                     parsers::Keyword::ControlFlowIf => {
@@ -156,14 +156,20 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
 
                             pos += size;
 
-                            Some(Box::new(statement.swap_remove(0)))
+                            Some(Box::new(
+                                match statement {
+                                    ASTUnit::Block(block) => block,
+                                    _ => unreachable!(),
+                                }
+                                .swap_remove(0),
+                            ))
                         } else {
                             None
                         };
 
                         ASTUnit::Statement(Statement::ControlFlow {
-                            condition: vec![condition],
-                            execute: block,
+                            condition: Box::new(condition),
+                            execute: Box::new(block),
                             alternative,
                         })
                     }
@@ -232,7 +238,7 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
                             identifier,
                             parameters,
                             return_type,
-                            expression,
+                            expression: Box::new(expression),
                         })
                     }
                 };
@@ -273,5 +279,5 @@ pub fn parse(tokens: &[Token]) -> (Block, usize) {
         }
     }
 
-    (units, pos)
+    (ASTUnit::Block(units), pos)
 }

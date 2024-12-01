@@ -65,12 +65,10 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
     if let Some(structure) = recognize_structure(input) {
         match structure {
             RecognizableStructure::Block((start, end)) => {
-                println!("=> parse block");
                 let (unit, size) = parse(&input[(start + 1)..(end - 1)]);
-                return (ASTUnit::Block(unit), size);
+                return (unit, size);
             }
             RecognizableStructure::FunctionInvokation((start, end)) => {
-                println!("=> parse function invokation");
                 let identifier = input[start].as_identifier().unwrap().to_string();
                 let params: Vec<ASTUnit> = input[(start + 1)..end]
                     .split(|tok| tok == &Token::Punctuation(','))
