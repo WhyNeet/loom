@@ -1,14 +1,10 @@
-use super::{
-    literal::Literal,
-    operation::Operation,
-    unit::{ASTUnit, Block},
-};
+use super::{literal::Literal, operation::Operation, unit::ASTUnit};
 
 #[derive(Debug, PartialEq)]
 pub enum Expression {
     BinaryExpression {
-        left: Block,
-        right: Block,
+        left: Box<ASTUnit>,
+        right: Box<ASTUnit>,
         operation: Operation,
     },
     Literal(Literal),

@@ -76,22 +76,18 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                         ASTUnit::Statement(Statement::Return(vec![expression.0]))
                     }
                     parsers::Keyword::While => {
+                        pos += 1;
+
                         let condition = &tokens[pos..(pos
                             + traversal::traverse_till_root_par(
                                 &tokens[pos..],
                                 (Token::Punctuation('{'), Token::Punctuation('}')),
                             )
                             .map(|pos| pos + 1)
-                            .unwrap_or(
-                                tokens
-                                    .iter()
-                                    .position(|tok| tok == &Token::Punctuation('{'))
-                                    .unwrap(),
-                            ))];
+                            .unwrap_or(tokens.len() - pos))];
+                        let (condition, size) = parsers::parse_expression(condition);
 
-                        pos += condition.len();
-
-                        let (condition, _) = parse(condition);
+                        pos += size;
 
                         let block = &tokens[pos..(pos
                             + traversal::traverse_till_root_par(
@@ -152,7 +148,7 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                         // an else clause is present
                         let alternative = if tokens[pos] == Token::Keyword("else".to_string()) {
                             pos += 1;
-                            let (mut statement, size) = parse(&tokens[pos..]);
+                            let (statement, size) = parse(&tokens[pos..]);
 
                             pos += size;
 
@@ -245,33 +241,35 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
 
                 units.push(unit);
             }
-            Token::Identifier(ident) => {
+            Token::Identifier(_ident) => {
                 // this is probably an assignment or function call
 
-                pos += 1;
+                // let unit = match &tokens[pos] {
+                //     Token::Operator(op) => {
+                //         let operation = Operation::from_str(&op).unwrap();
+                //         pos += 1;
+                //         let expression = &tokens[pos..(pos
+                //             + tokens[pos..]
+                //                 .iter()
+                //                 .position(|tok| tok == &Token::Punctuation(';'))
+                //                 .map(|pos| pos + 1)
+                //                 .unwrap_or(tokens.len() - pos))];
+                //         pos += expression.len();
+                //         let expression = parsers::parse_expression(expression);
+                //         ASTUnit::Expression(Expression::BinaryExpression {
+                //             left: Box::new(ASTUnit::Expression(Expression::Identifier(
+                //                 ident.to_string(),
+                //             ))),
+                //             right: Box::new(expression.0),
+                //             operation,
+                //         })
+                //     }
+                //     token => panic!("not implemented: {token:?}"),
+                // };
 
-                let unit = match &tokens[pos] {
-                    Token::Operator(op) => {
-                        let operation = Operation::from_str(&op).unwrap();
-                        pos += 1;
-                        let expression = &tokens[pos..(pos
-                            + tokens[pos..]
-                                .iter()
-                                .position(|tok| tok == &Token::Punctuation(';'))
-                                .map(|pos| pos + 1)
-                                .unwrap_or(tokens.len() - pos))];
-                        pos += expression.len();
-                        let expression = parsers::parse_expression(expression);
-                        ASTUnit::Expression(Expression::BinaryExpression {
-                            left: vec![ASTUnit::Expression(Expression::Identifier(
-                                ident.to_string(),
-                            ))],
-                            right: vec![expression.0],
-                            operation,
-                        })
-                    }
-                    _ => panic!("not implemented"),
-                };
+                let (unit, size) = parsers::parse_expression(&tokens[pos..]);
+
+                pos += size;
 
                 units.push(unit);
             }

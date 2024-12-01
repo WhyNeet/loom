@@ -147,8 +147,8 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
 
         (
             ASTUnit::Expression(Expression::BinaryExpression {
-                left: vec![left],
-                right: vec![right],
+                left: Box::new(left),
+                right: Box::new(right),
                 operation: lowest,
             }),
             size,
@@ -201,7 +201,7 @@ pub fn recognize_structure(input: &[Token]) -> Option<RecognizableStructure> {
         Some(RecognizableStructure::Block((0, end)))
     } else if mem::discriminant(&input[0]) == mem::discriminant(&Token::Identifier("".to_string()))
         && input.len() > 1
-        && mem::discriminant(&input[1]) == mem::discriminant(&Token::Punctuation('('))
+        && &input[1] == &Token::Punctuation('(')
     {
         let end = traversal::traverse_till_root_par(
             input,
