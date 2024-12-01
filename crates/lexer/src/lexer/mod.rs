@@ -24,7 +24,7 @@ pub fn lexer(input: &str) -> Vec<Token> {
             tokens.push(Token::Literal(Literal::Number(number)));
         } else if char == '"' {
             let string = extractors::extract_string(&input[pos..]);
-            pos += string.len();
+            pos += string.len() + 2;
             tokens.push(Token::Literal(Literal::String(string)));
         } else if char.is_ascii() {
             let keyword = extractors::extract_keyword(&input[pos..]);
