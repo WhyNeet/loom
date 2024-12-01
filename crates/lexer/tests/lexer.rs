@@ -5,7 +5,7 @@ use lexer::lexer::{
 
 #[test]
 pub fn lexer_works() {
-    let code = r#"let a = 1;
+    let code = r#"let a = -1;
 let b = 2; // this is a comment
 let sum = a + b / 2.5;
 "#;
@@ -15,7 +15,7 @@ let sum = a + b / 2.5;
     assert_eq!(tokens[0], Token::Keyword("let".to_string()));
     assert_eq!(tokens[1], Token::Identifier("a".to_string()));
     assert_eq!(tokens[2], Token::Operator("=".to_string()));
-    assert_eq!(tokens[3], Token::Literal(Literal::Number("1".to_string())));
+    assert_eq!(tokens[3], Token::Literal(Literal::Number("-1".to_string())));
     assert_eq!(tokens[4], Token::Punctuation(';'));
     assert_eq!(tokens[5], Token::Keyword("let".to_string()));
     assert_eq!(tokens[6], Token::Identifier("b".to_string()));
