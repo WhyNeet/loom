@@ -219,9 +219,11 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                             && tokens[pos + 1] == Token::Operator(">".to_string())
                         {
                             // "->" + "type"
-                            pos += 2 + 1;
                             match tokens[pos + 2] {
-                                Token::Type(ref ty) => ty.clone(),
+                                Token::Type(ref ty) => {
+                                    pos += 2 + 1;
+                                    ty.clone()
+                                }
                                 _ => panic!("expected return type"),
                             }
                         } else {
