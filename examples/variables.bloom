@@ -1,0 +1,4 @@
+fun main() {
+  const a = 0;
+  let b = a;
+}
