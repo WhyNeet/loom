@@ -8,3 +8,5 @@ inkwell = { version = "0.5.0", features = [
   "llvm18-0",
   "llvm18-0-prefer-dynamic",
 ] }
+parser = { path = "../parser" }
+common = { path = "../common" }
