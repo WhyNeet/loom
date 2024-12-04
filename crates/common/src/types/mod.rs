@@ -13,6 +13,7 @@ pub enum Type {
     Float64,
     Bool,
     Char,
+    Void,
 }
 
 impl Type {
@@ -31,6 +32,7 @@ impl Type {
             "f64" => Some(Self::Float64),
             "bool" => Some(Self::Bool),
             "char" => Some(Self::Char),
+            "void" => Some(Self::Void),
             _ => None,
         }
     }
