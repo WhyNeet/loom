@@ -1,4 +1,4 @@
-use common::util::traversal;
+use common::{types::Type, util::traversal};
 use lexer::lexer::token::Token;
 
 use crate::ast::{
@@ -191,33 +191,42 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                         // (
                         pos += 1;
 
-                        let parameters = tokens[pos..(pos + args_end_offset - 1)]
-                            .split(|tok| tok.eq(&Token::Punctuation(',')))
-                            .map(|param| (param[0].clone(), param[2].clone()))
-                            .map(|(ident, ty)| {
-                                (
-                                    match ident {
-                                        Token::Identifier(ident) => ident,
-                                        _ => panic!("expected identifier"),
-                                    },
-                                    match ty {
-                                        Token::Type(ty) => ty,
-                                        _ => panic!("expected type"),
-                                    },
-                                )
-                            })
-                            .collect();
+                        let parameters = if tokens[pos] == Token::Punctuation(')') {
+                            vec![]
+                        } else {
+                            tokens[pos..(pos + args_end_offset - 1)]
+                                .split(|tok| tok.eq(&Token::Punctuation(',')))
+                                .map(|param| (param[0].clone(), param[2].clone()))
+                                .map(|(ident, ty)| {
+                                    (
+                                        match ident {
+                                            Token::Identifier(ident) => ident,
+                                            _ => panic!("expected identifier"),
+                                        },
+                                        match ty {
+                                            Token::Type(ty) => ty,
+                                            _ => panic!("expected type"),
+                                        },
+                                    )
+                                })
+                                .collect()
+                        };
 
                         pos += args_end_offset;
 
                         // pos + "->".len()
-                        let return_type = match tokens[pos + 2] {
-                            Token::Type(ref ty) => ty.clone(),
-                            _ => panic!("expected return type"),
+                        let return_type = if tokens[pos] == Token::Operator("-".to_string())
+                            && tokens[pos + 1] == Token::Operator(">".to_string())
+                        {
+                            // "->" + "type"
+                            pos += 2 + 1;
+                            match tokens[pos + 2] {
+                                Token::Type(ref ty) => ty.clone(),
+                                _ => panic!("expected return type"),
+                            }
+                        } else {
+                            Type::Void
                         };
-
-                        // "->" + "type"
-                        pos += 2 + 1;
 
                         let block_end_offset = traversal::traverse_till_root_par(
                             &tokens[pos..],
