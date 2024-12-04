@@ -1,7 +1,7 @@
 use inkwell::{
     builder::Builder,
     context::Context,
-    types::{BasicTypeEnum, FunctionType},
+    types::{AnyType, BasicType, BasicTypeEnum, FunctionType},
     values::{BasicValueEnum, FunctionValue},
     AddressSpace,
 };
@@ -10,15 +10,22 @@ use parser::ast::{
     expression::Expression,
     unit::ASTUnit,
 };
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use super::common::{generate_for_literal, VariableData};
+use super::{
+    common::{generate_for_literal, VariableData},
+    variable::LLVMVariableGenerator,
+};
+
+pub type StackFrame<'ctx> = HashMap<String, VariableData<'ctx>>;
+pub type SSA<'ctx> = HashMap<String, BasicValueEnum<'ctx>>;
 
 pub struct LLVMFunctionGenerator<'ctx> {
     context: &'ctx Context,
     builder: Builder<'ctx>,
-    stack_frame: HashMap<String, VariableData<'ctx>>,
-    ssa: HashMap<String, BasicValueEnum<'ctx>>,
+    stack_frame: Rc<RefCell<StackFrame<'ctx>>>,
+    ssa: Rc<RefCell<SSA<'ctx>>>,
+    is_void: bool,
 }
 
 impl<'ctx> LLVMFunctionGenerator<'ctx> {
@@ -29,19 +36,25 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
 
         builder.position_at_end(entry);
 
+        let is_void = function.get_type().get_return_type().is_none();
+
         Self {
             context,
             builder,
-            stack_frame: HashMap::new(),
-            ssa: HashMap::new(),
+            stack_frame: Rc::new(RefCell::new(HashMap::new())),
+            ssa: Rc::new(RefCell::new(HashMap::new())),
+            is_void,
         }
     }
 
-    pub fn generate_from_ast(&mut self, ast: &'ctx ASTUnit) {
+    pub fn generate_from_ast(&'ctx self, ast: &'ctx ASTUnit) {
         self.interal_generate_from_ast(ast);
+        if self.is_void {
+            self.builder.build_return(None).unwrap();
+        }
     }
 
-    fn interal_generate_from_ast(&mut self, ast: &'ctx ASTUnit) {
+    fn interal_generate_from_ast(&'ctx self, ast: &'ctx ASTUnit) {
         match ast {
             ASTUnit::Block(block) => {
                 for unit in block {
@@ -49,76 +62,22 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                 }
             }
             ASTUnit::Declaration(decl) => match decl {
+                Declaration::FunctionDeclaration { .. } => {
+                    panic!("dont declare functions within functions pls")
+                }
                 Declaration::VariableDeclaration {
                     keyword,
                     identifier,
                     expression,
                 } => {
-                    let var_type = self.context.i32_type();
-
-                    if *keyword == VariableDeclarationKeyword::Let {
-                        // mutable variable declaration
-
-                        let var = self
-                            .builder
-                            .build_alloca(var_type, identifier.as_str())
-                            .unwrap();
-                        self.stack_frame.insert(
-                            identifier.to_string(),
-                            VariableData::new(var, var_type.into()),
-                        );
-                        self.builder
-                            .build_store(
-                                var,
-                                match &(**expression) {
-                                    ASTUnit::Expression(expr) => match expr {
-                                        Expression::Literal(literal) => {
-                                            generate_for_literal(self.context, literal)
-                                        }
-                                        Expression::Identifier(ident) => {
-                                            if let Some(&basic) = self.ssa.get(ident) {
-                                                basic
-                                            } else {
-                                                let variable_data =
-                                                    self.stack_frame.get(ident).unwrap();
-                                                self.builder
-                                                    .build_load(
-                                                        variable_data.ty(),
-                                                        variable_data.ptr(),
-                                                        ident,
-                                                    )
-                                                    .unwrap()
-                                            }
-                                        }
-                                        other => panic!("unimplemented: {other:?}"),
-                                    },
-                                    other => panic!("exprected expression, got: {other:?}"),
-                                },
-                            )
-                            .unwrap();
-                    } else {
-                        // immutable variable declaration
-
-                        let value = generate_for_literal(
-                            self.context,
-                            match &(**expression) {
-                                ASTUnit::Expression(expr) => match expr {
-                                    Expression::Literal(literal) => literal,
-                                    other => panic!("unimplemented: {other:?}"),
-                                },
-                                other => panic!("exprected expression, got: {other:?}"),
-                            },
-                        );
-
-                        self.ssa.insert(identifier.to_string(), value);
-                    }
+                    let var_gen = LLVMVariableGenerator::new(
+                        self.context,
+                        &self.builder,
+                        Rc::clone(&self.stack_frame),
+                        Rc::clone(&self.ssa),
+                    );
+                    var_gen.generate_for_ast(keyword, identifier, expression);
                 }
-                Declaration::FunctionDeclaration {
-                    identifier,
-                    parameters,
-                    return_type,
-                    expression,
-                } => panic!("dont declare functions within functions pls"),
             },
             ASTUnit::Expression(expr) => {}
             ASTUnit::Statement(stmt) => {}

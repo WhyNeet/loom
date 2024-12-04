@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use common::types::Type;
 use inkwell::{
     context::Context,
@@ -24,7 +26,7 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
         Self { context, module }
     }
 
-    pub fn generate_from_ast(&mut self, ast: &'ctx ASTUnit) {
+    pub fn generate_from_ast(&self, ast: &'ctx ASTUnit) {
         match ast {
             ASTUnit::Block(root) => {
                 for unit in root {
@@ -35,7 +37,7 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
         }
     }
 
-    fn __generate_from_ast(&mut self, unit: &'ctx ASTUnit) {
+    fn __generate_from_ast(&self, unit: &'ctx ASTUnit) {
         match unit {
             ASTUnit::Declaration(decl) => match decl {
                 Declaration::FunctionDeclaration {
@@ -60,7 +62,8 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
                         None,
                     );
 
-                    LLVMFunctionGenerator::new(self.context, function)
+                    let fn_gen = LLVMFunctionGenerator::new(self.context, function);
+                    unsafe { (&fn_gen as *const LLVMFunctionGenerator).as_ref().unwrap() }
                         .generate_from_ast(expression);
                 }
                 _ => todo!(),
