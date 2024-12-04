@@ -9,6 +9,7 @@ use parser::ast::{
 
 use super::{
     common::{generate_for_literal, VariableData},
+    expression::LLVMExpressionGenerator,
     function::{StackFrame, SSA},
 };
 
@@ -53,29 +54,24 @@ impl<'ctx> LLVMVariableGenerator<'ctx> {
                 identifier.to_string(),
                 VariableData::new(var, var_type.into()),
             );
+
+            match expression {
+                ASTUnit::Expression(expr) => {
+                    LLVMExpressionGenerator::new(
+                        self.context,
+                        self.builder,
+                        Rc::clone(&self.stack_frame),
+                        Rc::clone(&self.ssa),
+                    )
+                    .generate_from_ast(&format!("{identifier}_tmp"), expr);
+                }
+                other => panic!("exprected expression, got: {other:?}"),
+            };
+
             self.builder
                 .build_store(
                     var,
-                    match expression {
-                        ASTUnit::Expression(expr) => match expr {
-                            Expression::Literal(literal) => {
-                                generate_for_literal(self.context, literal)
-                            }
-                            Expression::Identifier(ident) => {
-                                if let Some(&basic) = self.ssa.borrow().get(ident) {
-                                    basic
-                                } else {
-                                    let sf = self.stack_frame.borrow();
-                                    let variable_data = sf.get(ident).unwrap();
-                                    self.builder
-                                        .build_load(variable_data.ty(), variable_data.ptr(), ident)
-                                        .unwrap()
-                                }
-                            }
-                            other => panic!("unimplemented: {other:?}"),
-                        },
-                        other => panic!("exprected expression, got: {other:?}"),
-                    },
+                    *self.ssa.borrow().get(&format!("{identifier}_tmp")).unwrap(),
                 )
                 .unwrap();
         } else {

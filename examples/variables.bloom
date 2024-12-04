@@ -1,4 +1,5 @@
 fun main() {
   const a = 0;
-  let b = a;
+  let b = a + 1;
+  let c = a + b;
 }

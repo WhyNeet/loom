@@ -1,21 +1,12 @@
 use inkwell::{
     builder::Builder,
     context::Context,
-    types::{AnyType, BasicType, BasicTypeEnum, FunctionType},
     values::{BasicValueEnum, FunctionValue},
-    AddressSpace,
 };
-use parser::ast::{
-    declaration::{Declaration, VariableDeclarationKeyword},
-    expression::Expression,
-    unit::ASTUnit,
-};
+use parser::ast::{declaration::Declaration, unit::ASTUnit};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use super::{
-    common::{generate_for_literal, VariableData},
-    variable::LLVMVariableGenerator,
-};
+use super::{common::VariableData, variable::LLVMVariableGenerator};
 
 pub type StackFrame<'ctx> = HashMap<String, VariableData<'ctx>>;
 pub type SSA<'ctx> = HashMap<String, BasicValueEnum<'ctx>>;
@@ -48,17 +39,17 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
     }
 
     pub fn generate_from_ast(&'ctx self, ast: &'ctx ASTUnit) {
-        self.interal_generate_from_ast(ast);
+        self.internal_generate_from_ast(ast);
         if self.is_void {
             self.builder.build_return(None).unwrap();
         }
     }
 
-    fn interal_generate_from_ast(&'ctx self, ast: &'ctx ASTUnit) {
+    fn internal_generate_from_ast(&'ctx self, ast: &'ctx ASTUnit) {
         match ast {
             ASTUnit::Block(block) => {
                 for unit in block {
-                    self.interal_generate_from_ast(unit);
+                    self.internal_generate_from_ast(unit);
                 }
             }
             ASTUnit::Declaration(decl) => match decl {
