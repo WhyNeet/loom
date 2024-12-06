@@ -6,7 +6,9 @@ use inkwell::{
 use parser::ast::{declaration::Declaration, unit::ASTUnit};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use super::{common::VariableData, variable::LLVMVariableGenerator};
+use super::{
+    common::VariableData, expression::LLVMExpressionGenerator, variable::LLVMVariableGenerator,
+};
 
 pub type StackFrame<'ctx> = HashMap<String, VariableData<'ctx>>;
 pub type SSA<'ctx> = HashMap<String, BasicValueEnum<'ctx>>;
@@ -70,7 +72,15 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                     var_gen.generate_for_ast(keyword, identifier, expression);
                 }
             },
-            ASTUnit::Expression(expr) => {}
+            ASTUnit::Expression(expr) => {
+                LLVMExpressionGenerator::new(
+                    self.context,
+                    &self.builder,
+                    Rc::clone(&self.stack_frame),
+                    Rc::clone(&self.ssa),
+                )
+                .generate_from_ast(&format!("expr_tmp"), expr);
+            }
             ASTUnit::Statement(stmt) => {}
         }
     }

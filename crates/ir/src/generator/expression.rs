@@ -63,60 +63,105 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                 right,
                 operation,
             } => {
-                let left_store_in = format!("{store_in}_lhs");
-                let right_store_in = format!("{store_in}_rhs");
-
-                self.generate_from_ast(
-                    &left_store_in,
-                    match &(**left) {
-                        ASTUnit::Expression(expr) => expr,
-                        _ => todo!(),
-                    },
-                );
-
-                self.generate_from_ast(
-                    &right_store_in,
-                    match &(**right) {
-                        ASTUnit::Expression(expr) => expr,
-                        _ => todo!(),
-                    },
-                );
-
-                let lhs = self
-                    .ssa
-                    .borrow()
-                    .get(&left_store_in)
-                    .unwrap()
-                    .into_int_value();
-                let rhs = self
-                    .ssa
-                    .borrow()
-                    .get(&right_store_in)
-                    .unwrap()
-                    .into_int_value();
-
                 let op_res = match operation {
-                    Operation::Algebraic(alg) => match alg {
-                        AlgebraicOperation::Addition => {
-                            self.builder.build_int_add(lhs, rhs, store_in)
-                        }
-                        AlgebraicOperation::Division => {
-                            self.builder.build_int_signed_div(lhs, rhs, store_in)
-                        }
-                        AlgebraicOperation::Multiplication => {
-                            self.builder.build_int_mul(lhs, rhs, store_in)
-                        }
-                        AlgebraicOperation::Subtraction => {
-                            self.builder.build_int_sub(lhs, rhs, store_in)
-                        }
-                    },
-                    _ => panic!("logical operations are not yet implemented"),
-                }
-                .unwrap();
+                    Operation::Algebraic(alg) => {
+                        let left_store_in = format!("{store_in}_lhs");
+                        let right_store_in = format!("{store_in}_rhs");
 
-                self.ssa
-                    .borrow_mut()
-                    .insert(store_in.to_string(), op_res.into());
+                        self.generate_from_ast(
+                            &left_store_in,
+                            match &(**left) {
+                                ASTUnit::Expression(expr) => expr,
+                                _ => todo!(),
+                            },
+                        );
+
+                        self.generate_from_ast(
+                            &right_store_in,
+                            match &(**right) {
+                                ASTUnit::Expression(expr) => expr,
+                                _ => todo!(),
+                            },
+                        );
+
+                        let lhs = self
+                            .ssa
+                            .borrow()
+                            .get(&left_store_in)
+                            .unwrap()
+                            .into_int_value();
+                        let rhs = self
+                            .ssa
+                            .borrow()
+                            .get(&right_store_in)
+                            .unwrap()
+                            .into_int_value();
+                        Some(match alg {
+                            AlgebraicOperation::Addition => {
+                                self.builder.build_int_add(lhs, rhs, store_in)
+                            }
+                            AlgebraicOperation::Division => {
+                                self.builder.build_int_signed_div(lhs, rhs, store_in)
+                            }
+                            AlgebraicOperation::Multiplication => {
+                                self.builder.build_int_mul(lhs, rhs, store_in)
+                            }
+                            AlgebraicOperation::Subtraction => {
+                                self.builder.build_int_sub(lhs, rhs, store_in)
+                            }
+                        })
+                    }
+                    Operation::Assignment(assign) => {
+                        let identifier = match &**left {
+                            ASTUnit::Expression(var_name) => match var_name {
+                                Expression::Identifier(ident) => ident,
+                                _ => unreachable!(),
+                            },
+                            _ => unreachable!(),
+                        };
+
+                        let right_store_in = format!("{store_in}_rhs");
+
+                        self.generate_from_ast(
+                            &right_store_in,
+                            match &(**right) {
+                                ASTUnit::Expression(expr) => expr,
+                                _ => todo!(),
+                            },
+                        );
+
+                        let lhs = self
+                            .stack_frame
+                            .borrow()
+                            .get(identifier.as_str())
+                            .unwrap()
+                            .ptr();
+
+                        let rhs = self
+                            .ssa
+                            .borrow()
+                            .get(&right_store_in)
+                            .unwrap()
+                            .into_int_value();
+
+                        match assign {
+                            AssignmentOperation::Assign => self.builder.build_store(lhs, rhs),
+                            _ => {
+                                panic!("other assignment operators will be simplifed using parser")
+                            }
+                        }
+                        .unwrap();
+
+                        None
+                    }
+                    _ => panic!("logical operations are not yet implemented"),
+                };
+
+                if let Some(op_res) = op_res {
+                    self.ssa
+                        .borrow_mut()
+                        .insert(store_in.to_string(), op_res.unwrap().into());
+                }
             }
         };
     }
