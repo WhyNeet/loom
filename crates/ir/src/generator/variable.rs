@@ -55,25 +55,19 @@ impl<'ctx> LLVMVariableGenerator<'ctx> {
                 VariableData::new(var, var_type.into()),
             );
 
-            match expression {
-                ASTUnit::Expression(expr) => {
-                    LLVMExpressionGenerator::new(
-                        self.context,
-                        self.builder,
-                        Rc::clone(&self.stack_frame),
-                        Rc::clone(&self.ssa),
-                    )
-                    .generate_from_ast(&format!("{identifier}_tmp"), expr);
-                }
-                other => panic!("exprected expression, got: {other:?}"),
-            };
-
-            self.builder
-                .build_store(
-                    var,
-                    *self.ssa.borrow().get(&format!("{identifier}_tmp")).unwrap(),
+            let value = match expression {
+                ASTUnit::Expression(expr) => LLVMExpressionGenerator::new(
+                    self.context,
+                    self.builder,
+                    Rc::clone(&self.stack_frame),
+                    Rc::clone(&self.ssa),
                 )
-                .unwrap();
+                .generate_from_ast(&format!("{identifier}_tmp"), expr),
+                other => panic!("exprected expression, got: {other:?}"),
+            }
+            .unwrap();
+
+            self.builder.build_store(var, value).unwrap();
         } else {
             // immutable variable declaration
 
