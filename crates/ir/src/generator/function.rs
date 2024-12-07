@@ -7,7 +7,8 @@ use parser::ast::{declaration::Declaration, unit::ASTUnit};
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use super::{
-    common::VariableData, expression::LLVMExpressionGenerator, variable::LLVMVariableGenerator,
+    common::VariableData, expression::LLVMExpressionGenerator, module::FunctionStack,
+    variable::LLVMVariableGenerator,
 };
 
 pub type StackFrame<'ctx> = HashMap<String, VariableData<'ctx>>;
@@ -18,11 +19,16 @@ pub struct LLVMFunctionGenerator<'ctx> {
     builder: Builder<'ctx>,
     stack_frame: Rc<RefCell<StackFrame<'ctx>>>,
     ssa: Rc<RefCell<SSA<'ctx>>>,
+    function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
     is_void: bool,
 }
 
 impl<'ctx> LLVMFunctionGenerator<'ctx> {
-    pub fn new(context: &'ctx Context, function: FunctionValue<'ctx>) -> Self {
+    pub fn new(
+        context: &'ctx Context,
+        function: FunctionValue<'ctx>,
+        function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
+    ) -> Self {
         let entry = context.append_basic_block(function, "entry");
 
         let builder = context.create_builder();
@@ -36,6 +42,7 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
             builder,
             stack_frame: Rc::new(RefCell::new(HashMap::new())),
             ssa: Rc::new(RefCell::new(HashMap::new())),
+            function_stack,
             is_void,
         }
     }
@@ -68,6 +75,7 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                         &self.builder,
                         Rc::clone(&self.stack_frame),
                         Rc::clone(&self.ssa),
+                        Rc::clone(&self.function_stack),
                     );
                     var_gen.generate_for_ast(keyword, identifier, expression);
                 }
@@ -78,6 +86,7 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                     &self.builder,
                     Rc::clone(&self.stack_frame),
                     Rc::clone(&self.ssa),
+                    Rc::clone(&self.function_stack),
                 )
                 .generate_from_ast(&format!("expr_tmp"), expr);
             }

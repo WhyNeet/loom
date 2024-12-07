@@ -1,6 +1,10 @@
 use std::{cell::RefCell, rc::Rc};
 
-use inkwell::{builder::Builder, context::Context, values::BasicValueEnum};
+use inkwell::{
+    builder::Builder,
+    context::Context,
+    values::{BasicMetadataValueEnum, BasicValueEnum},
+};
 use parser::ast::{
     expression::Expression,
     operation::{AlgebraicOperation, AssignmentOperation, Operation},
@@ -10,6 +14,7 @@ use parser::ast::{
 use super::{
     common::generate_for_literal,
     function::{StackFrame, SSA},
+    module::FunctionStack,
 };
 
 pub struct LLVMExpressionGenerator<'ctx> {
@@ -17,6 +22,7 @@ pub struct LLVMExpressionGenerator<'ctx> {
     context: &'ctx Context,
     stack_frame: Rc<RefCell<StackFrame<'ctx>>>,
     ssa: Rc<RefCell<SSA<'ctx>>>,
+    function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
 }
 
 impl<'ctx> LLVMExpressionGenerator<'ctx> {
@@ -25,12 +31,14 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
         builder: &'ctx Builder<'ctx>,
         stack_frame: Rc<RefCell<StackFrame<'ctx>>>,
         ssa: Rc<RefCell<SSA<'ctx>>>,
+        function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
     ) -> Self {
         Self {
             builder,
             context,
             stack_frame,
             ssa,
+            function_stack,
         }
     }
 
@@ -56,8 +64,36 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
 
                 return Some(value);
             }
-            Expression::FunctionInvokation { .. } => {
-                panic!("function invokation isnt implemented yet")
+            Expression::FunctionInvokation {
+                function_name,
+                parameters,
+            } => {
+                let params = parameters
+                    .into_iter()
+                    .enumerate()
+                    .map(|(idx, param)| {
+                        self.generate_from_ast(
+                            &format!("{idx}"),
+                            match *param {
+                                ASTUnit::Expression(ref expr) => expr,
+                                _ => unreachable!(),
+                            },
+                        )
+                        .unwrap()
+                    })
+                    .map(|param| param.into())
+                    .collect::<Vec<BasicMetadataValueEnum<'ctx>>>();
+
+                let instruct = self
+                    .builder
+                    .build_call(
+                        *self.function_stack.borrow().get(function_name).unwrap(),
+                        &params,
+                        store_in,
+                    )
+                    .unwrap();
+
+                return instruct.try_as_basic_value().left();
             }
             Expression::BinaryExpression {
                 left,

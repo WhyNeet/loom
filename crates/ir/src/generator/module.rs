@@ -1,18 +1,22 @@
-use std::rc::Rc;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use common::types::Type;
 use inkwell::{
     context::Context,
     module::Module,
     types::{BasicMetadataTypeEnum, BasicType},
+    values::FunctionValue,
 };
 use parser::ast::{declaration::Declaration, unit::ASTUnit};
 
 use super::{common::type_for, function::LLVMFunctionGenerator};
 
+pub type FunctionStack<'ctx> = HashMap<String, FunctionValue<'ctx>>;
+
 pub struct LLVMModuleGenerator<'ctx> {
     context: &'ctx Context,
     module: Module<'ctx>,
+    function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
 }
 
 impl<'ctx> LLVMModuleGenerator<'ctx> {
@@ -23,7 +27,11 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
     pub fn new(context: &'ctx Context, name: &str) -> Self {
         let module = context.create_module(name);
 
-        Self { context, module }
+        Self {
+            context,
+            module,
+            function_stack: Rc::new(RefCell::new(FunctionStack::new())),
+        }
     }
 
     pub fn generate_from_ast(&self, ast: &'ctx ASTUnit) {
@@ -62,9 +70,17 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
                         None,
                     );
 
-                    let fn_gen = LLVMFunctionGenerator::new(self.context, function);
+                    let fn_gen = LLVMFunctionGenerator::new(
+                        self.context,
+                        function,
+                        Rc::clone(&self.function_stack),
+                    );
                     unsafe { (&fn_gen as *const LLVMFunctionGenerator).as_ref().unwrap() }
                         .generate_from_ast(expression);
+
+                    self.function_stack
+                        .borrow_mut()
+                        .insert(identifier.clone(), function);
                 }
                 _ => todo!(),
             },
