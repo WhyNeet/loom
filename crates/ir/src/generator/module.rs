@@ -5,11 +5,14 @@ use inkwell::{
     context::Context,
     module::Module,
     types::{BasicMetadataTypeEnum, BasicType},
-    values::FunctionValue,
+    values::{BasicValueEnum, FunctionValue},
 };
 use parser::ast::{declaration::Declaration, unit::ASTUnit};
 
-use super::{common::type_for, function::LLVMFunctionGenerator};
+use super::{
+    common::type_for,
+    function::{LLVMFunctionGenerator, StackFrame, SSA},
+};
 
 pub type FunctionStack<'ctx> = HashMap<String, FunctionValue<'ctx>>;
 
@@ -73,6 +76,11 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
                     let fn_gen = LLVMFunctionGenerator::new(
                         self.context,
                         function,
+                        parameters
+                            .iter()
+                            .map(|(name, _)| name.as_str())
+                            .collect::<Vec<&str>>()
+                            .as_slice(),
                         Rc::clone(&self.function_stack),
                     );
                     unsafe { (&fn_gen as *const LLVMFunctionGenerator).as_ref().unwrap() }

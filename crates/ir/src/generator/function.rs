@@ -8,7 +8,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use super::{
     common::VariableData, expression::LLVMExpressionGenerator, module::FunctionStack,
-    variable::LLVMVariableGenerator,
+    statement::LLVMStatementGenerator, variable::LLVMVariableGenerator,
 };
 
 pub type StackFrame<'ctx> = HashMap<String, VariableData<'ctx>>;
@@ -27,6 +27,7 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
     pub fn new(
         context: &'ctx Context,
         function: FunctionValue<'ctx>,
+        param_names: &[&str],
         function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
     ) -> Self {
         let entry = context.append_basic_block(function, "entry");
@@ -37,11 +38,17 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
 
         let is_void = function.get_type().get_return_type().is_none();
 
+        let mut ssa = SSA::new();
+
+        for (idx, param) in function.get_param_iter().enumerate() {
+            ssa.insert(param_names[idx].to_string(), param);
+        }
+
         Self {
             context,
             builder,
             stack_frame: Rc::new(RefCell::new(HashMap::new())),
-            ssa: Rc::new(RefCell::new(HashMap::new())),
+            ssa: Rc::new(RefCell::new(ssa)),
             function_stack,
             is_void,
         }
@@ -90,7 +97,20 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                 )
                 .generate_from_ast(&format!("expr_tmp"), expr);
             }
-            ASTUnit::Statement(stmt) => {}
+            ASTUnit::Statement(stmt) => {
+                let expr = LLVMExpressionGenerator::new(
+                    self.context,
+                    &self.builder,
+                    Rc::clone(&self.stack_frame),
+                    Rc::clone(&self.ssa),
+                    Rc::clone(&self.function_stack),
+                );
+
+                LLVMStatementGenerator::new(self.context, &self.builder, unsafe {
+                    (&expr as *const LLVMExpressionGenerator).as_ref().unwrap()
+                })
+                .generate_from_ast(stmt);
+            }
         }
     }
 }
