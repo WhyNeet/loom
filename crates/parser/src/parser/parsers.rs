@@ -1,4 +1,4 @@
-use std::mem;
+use std::{mem, rc::Rc};
 
 use common::{
     constants::keywords::{
@@ -147,8 +147,8 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
 
         (
             ASTUnit::Expression(Expression::BinaryExpression {
-                left: Box::new(left),
-                right: Box::new(right),
+                left: Rc::new(left),
+                right: Rc::new(right),
                 operation: lowest,
             }),
             size,

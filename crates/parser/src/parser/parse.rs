@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use common::{types::Type, util::traversal};
 use lexer::lexer::token::Token;
 
@@ -54,7 +56,7 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                         ASTUnit::Declaration(Declaration::VariableDeclaration {
                             keyword: decl,
                             identifier,
-                            expression: Box::new(expression),
+                            expression: Rc::new(expression),
                         })
                     }
                     parsers::Keyword::Return => {
@@ -73,7 +75,7 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
 
                         let expression = parsers::parse_expression(expression);
 
-                        ASTUnit::Statement(Statement::Return(vec![expression.0]))
+                        ASTUnit::Statement(Statement::Return(vec![Rc::new(expression.0)]))
                     }
                     parsers::Keyword::While => {
                         pos += 1;
@@ -108,8 +110,8 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                         let (block, _) = parse(block);
 
                         ASTUnit::Statement(Statement::Loop(LoopStatement::While {
-                            condition: Box::new(condition),
-                            execute: Box::new(block),
+                            condition: Rc::new(condition),
+                            execute: Rc::new(block),
                         }))
                     }
                     parsers::Keyword::ControlFlowIf => {
@@ -152,20 +154,20 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
 
                             pos += size;
 
-                            Some(Box::new(
+                            Some(
                                 match statement {
                                     ASTUnit::Block(block) => block,
                                     _ => unreachable!(),
                                 }
                                 .swap_remove(0),
-                            ))
+                            )
                         } else {
                             None
                         };
 
                         ASTUnit::Statement(Statement::ControlFlow {
-                            condition: Box::new(condition),
-                            execute: Box::new(block),
+                            condition: Rc::new(condition),
+                            execute: Rc::new(block),
                             alternative,
                         })
                     }
@@ -245,12 +247,12 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                             identifier,
                             parameters,
                             return_type,
-                            expression: Box::new(expression),
+                            expression: Rc::new(expression),
                         })
                     }
                 };
 
-                units.push(unit);
+                units.push(Rc::new(unit));
             }
             Token::Identifier(_ident) => {
                 // this is probably an assignment or function call
@@ -282,7 +284,7 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
 
                 pos += size;
 
-                units.push(unit);
+                units.push(Rc::new(unit));
             }
             _ => pos += 1,
         }

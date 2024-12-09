@@ -1,12 +1,14 @@
+use std::rc::Rc;
+
 use super::unit::{ASTUnit, Block};
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {
     Return(Block),
     ControlFlow {
-        condition: Box<ASTUnit>,
-        execute: Box<ASTUnit>,
-        alternative: Option<Box<ASTUnit>>,
+        condition: Rc<ASTUnit>,
+        execute: Rc<ASTUnit>,
+        alternative: Option<Rc<ASTUnit>>,
     },
     Loop(LoopStatement),
 }
@@ -14,7 +16,7 @@ pub enum Statement {
 #[derive(Debug, PartialEq)]
 pub enum LoopStatement {
     While {
-        condition: Box<ASTUnit>,
-        execute: Box<ASTUnit>,
+        condition: Rc<ASTUnit>,
+        execute: Rc<ASTUnit>,
     },
 }

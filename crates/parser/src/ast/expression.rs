@@ -1,10 +1,12 @@
+use std::rc::Rc;
+
 use super::{literal::Literal, operation::Operation, unit::ASTUnit};
 
 #[derive(Debug, PartialEq)]
 pub enum Expression {
     BinaryExpression {
-        left: Box<ASTUnit>,
-        right: Box<ASTUnit>,
+        left: Rc<ASTUnit>,
+        right: Rc<ASTUnit>,
         operation: Operation,
     },
     Literal(Literal),
