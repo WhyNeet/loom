@@ -26,7 +26,7 @@ impl<'ctx> VariableData<'ctx> {
     }
 }
 
-pub fn type_for<'ctx>(context: &'ctx Context, ty: &'ctx Type) -> BasicTypeEnum<'ctx> {
+pub fn type_for<'ctx>(context: &'ctx Context, ty: &Type) -> BasicTypeEnum<'ctx> {
     match ty {
         Type::Bool => context.bool_type().into(),
         Type::Char => context.i32_type().into(),

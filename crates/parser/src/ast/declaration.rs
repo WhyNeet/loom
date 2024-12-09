@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use common::types::Type;
 
 use super::unit::ASTUnit;
@@ -8,13 +10,13 @@ pub enum Declaration {
     VariableDeclaration {
         keyword: VariableDeclarationKeyword,
         identifier: String,
-        expression: Box<ASTUnit>,
+        expression: Rc<ASTUnit>,
     },
     FunctionDeclaration {
         identifier: String,
         parameters: Vec<(String, Type)>,
         return_type: Type,
-        expression: Box<ASTUnit>,
+        expression: Rc<ASTUnit>,
     },
 }
 

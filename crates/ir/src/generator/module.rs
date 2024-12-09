@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, ptr, rc::Rc};
 
 use common::types::Type;
 use inkwell::{
@@ -37,19 +37,19 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
         }
     }
 
-    pub fn generate_from_ast(&self, ast: &'ctx ASTUnit) {
-        match ast {
+    pub fn generate_from_ast(&self, ast: Rc<ASTUnit>) {
+        match ast.as_ref() {
             ASTUnit::Block(root) => {
                 for unit in root {
-                    self.__generate_from_ast(unit);
+                    self.__generate_from_ast(Rc::clone(unit));
                 }
             }
             _ => panic!("expected root block"),
         }
     }
 
-    fn __generate_from_ast(&self, unit: &'ctx ASTUnit) {
-        match unit {
+    fn __generate_from_ast(&self, unit: Rc<ASTUnit>) {
+        match unit.as_ref() {
             ASTUnit::Declaration(decl) => match decl {
                 Declaration::FunctionDeclaration {
                     identifier,
@@ -68,7 +68,7 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
                             Type::Void => None,
                             other => Some(other),
                         }
-                        .map(|ty| type_for(self.context, ty).fn_type(&params, false))
+                        .map(|ty| type_for(self.context, &ty).fn_type(&params, false))
                         .unwrap_or(self.context.void_type().fn_type(&params, false)),
                         None,
                     );
@@ -84,7 +84,7 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
                         Rc::clone(&self.function_stack),
                     );
                     unsafe { (&fn_gen as *const LLVMFunctionGenerator).as_ref().unwrap() }
-                        .generate_from_ast(expression);
+                        .generate_from_ast(Rc::clone(expression));
 
                     self.function_stack
                         .borrow_mut()

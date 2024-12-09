@@ -1,4 +1,4 @@
-use std::{env, fs, path::PathBuf};
+use std::{env, fs, path::PathBuf, rc::Rc};
 
 use inkwell::context::Context;
 use lexer::lexer::lexer;
@@ -22,10 +22,9 @@ fn main() {
         .0;
 
     let llvm_cx = Context::create();
-    let mut module_generator =
-        ir::generator::module::LLVMModuleGenerator::new(&llvm_cx, module_name);
+    let module_generator = ir::generator::module::LLVMModuleGenerator::new(&llvm_cx, module_name);
 
-    module_generator.generate_from_ast(&ast);
+    module_generator.generate_from_ast(Rc::new(ast));
 
     module_generator
         .module()
