@@ -4,10 +4,11 @@ use inkwell::{
     builder::Builder,
     context::Context,
     values::{BasicMetadataValueEnum, BasicValueEnum},
+    IntPredicate,
 };
 use parser::ast::{
     expression::Expression,
-    operation::{AlgebraicOperation, AssignmentOperation, Operation},
+    operation::{AlgebraicOperation, AssignmentOperation, LogicalOperation, Operation},
     unit::ASTUnit,
 };
 
@@ -179,7 +180,229 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
 
                         None
                     }
-                    _ => panic!("logical operations are not yet implemented"),
+                    Operation::Logical(log) => match log {
+                        LogicalOperation::Or => {
+                            let left_store_in = format!("{store_in}_lhs");
+                            let right_store_in = format!("{store_in}_rhs");
+
+                            let lhs = self
+                                .generate_from_ast(
+                                    &left_store_in,
+                                    match &(**left) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            let rhs = self
+                                .generate_from_ast(
+                                    &right_store_in,
+                                    match &(**right) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            Some(self.builder.build_or(lhs, rhs, store_in))
+                        }
+                        LogicalOperation::And => {
+                            let left_store_in = format!("{store_in}_lhs");
+                            let right_store_in = format!("{store_in}_rhs");
+
+                            let lhs = self
+                                .generate_from_ast(
+                                    &left_store_in,
+                                    match &(**left) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            let rhs = self
+                                .generate_from_ast(
+                                    &right_store_in,
+                                    match &(**right) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            Some(self.builder.build_and(lhs, rhs, store_in))
+                        }
+                        LogicalOperation::Equal => {
+                            let left_store_in = format!("{store_in}_lhs");
+                            let right_store_in = format!("{store_in}_rhs");
+
+                            let lhs = self
+                                .generate_from_ast(
+                                    &left_store_in,
+                                    match &(**left) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            let rhs = self
+                                .generate_from_ast(
+                                    &right_store_in,
+                                    match &(**right) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            Some(self.builder.build_int_compare(
+                                IntPredicate::EQ,
+                                lhs,
+                                rhs,
+                                store_in,
+                            ))
+                        }
+                        LogicalOperation::Less => {
+                            let left_store_in = format!("{store_in}_lhs");
+                            let right_store_in = format!("{store_in}_rhs");
+
+                            let lhs = self
+                                .generate_from_ast(
+                                    &left_store_in,
+                                    match &(**left) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            let rhs = self
+                                .generate_from_ast(
+                                    &right_store_in,
+                                    match &(**right) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            Some(self.builder.build_int_compare(
+                                IntPredicate::SLT,
+                                lhs,
+                                rhs,
+                                store_in,
+                            ))
+                        }
+                        LogicalOperation::Greater => {
+                            let left_store_in = format!("{store_in}_lhs");
+                            let right_store_in = format!("{store_in}_rhs");
+
+                            let lhs = self
+                                .generate_from_ast(
+                                    &left_store_in,
+                                    match &(**left) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            let rhs = self
+                                .generate_from_ast(
+                                    &right_store_in,
+                                    match &(**right) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            Some(self.builder.build_int_compare(
+                                IntPredicate::SGT,
+                                lhs,
+                                rhs,
+                                store_in,
+                            ))
+                        }
+                        LogicalOperation::LessOrEqual => {
+                            let left_store_in = format!("{store_in}_lhs");
+                            let right_store_in = format!("{store_in}_rhs");
+
+                            let lhs = self
+                                .generate_from_ast(
+                                    &left_store_in,
+                                    match &(**left) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            let rhs = self
+                                .generate_from_ast(
+                                    &right_store_in,
+                                    match &(**right) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            Some(self.builder.build_int_compare(
+                                IntPredicate::SLE,
+                                lhs,
+                                rhs,
+                                store_in,
+                            ))
+                        }
+                        LogicalOperation::GreaterOrEqual => {
+                            let left_store_in = format!("{store_in}_lhs");
+                            let right_store_in = format!("{store_in}_rhs");
+
+                            let lhs = self
+                                .generate_from_ast(
+                                    &left_store_in,
+                                    match &(**left) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            let rhs = self
+                                .generate_from_ast(
+                                    &right_store_in,
+                                    match &(**right) {
+                                        ASTUnit::Expression(expr) => expr,
+                                        _ => todo!(),
+                                    },
+                                )
+                                .unwrap()
+                                .into_int_value();
+
+                            Some(self.builder.build_int_compare(
+                                IntPredicate::SGE,
+                                lhs,
+                                rhs,
+                                store_in,
+                            ))
+                        }
+                    },
                 };
 
                 return op_res.map(|res| res.unwrap()).map(|intv| intv.into());

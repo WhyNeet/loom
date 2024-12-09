@@ -74,21 +74,32 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                 let next = ASTUnit::Block(next);
                 self.fn_gen.generate_from_ast(Rc::new(next));
 
-                // // generate a then-block
-                // let then_block = self.context.append_basic_block(self.function, "bb");
-                // self.builder.position_at_end(then_block);
+                // generate a then-block
+                let then_block = self.context.append_basic_block(self.function, "bb");
+                self.builder.position_at_end(then_block);
 
-                // self.fn_gen.generate_from_ast(execute);
-                // self.builder.build_unconditional_branch(continue_block);
+                self.fn_gen.generate_from_ast(Rc::clone(execute));
+                self.builder
+                    .build_unconditional_branch(continue_block)
+                    .unwrap();
 
-                if let Some(_alternative) = alternative {
+                let else_block = if let Some(alternative) = alternative {
                     // generate an alternative block
-                    // let else_block = self.context.append_basic_block(function, name);
-                }
+                    let else_block = self.context.append_basic_block(self.function, "bb");
+                    self.builder.position_at_end(else_block);
+                    self.fn_gen.generate_from_ast(Rc::clone(alternative));
+                    self.builder
+                        .build_unconditional_branch(continue_block)
+                        .unwrap();
+
+                    Some(else_block)
+                } else {
+                    None
+                };
 
                 self.builder.position_at_end(current_block.unwrap());
                 self.builder
-                    .build_conditional_branch(cmp, continue_block, continue_block)
+                    .build_conditional_branch(cmp, then_block, else_block.unwrap_or(continue_block))
                     .unwrap();
             }
             other => panic!("{other:?} is not implemented yet"),
