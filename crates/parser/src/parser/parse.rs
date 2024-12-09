@@ -150,17 +150,25 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                         // an else clause is present
                         let alternative = if tokens[pos] == Token::Keyword("else".to_string()) {
                             pos += 1;
-                            let (statement, size) = parse(&tokens[pos..]);
+                            let (statement, size) = parse(
+                                &tokens[pos..(pos
+                                    + traversal::traverse_till_root_par(
+                                        &tokens[pos..],
+                                        (Token::Punctuation('{'), Token::Punctuation('}')),
+                                    )
+                                    .map(|pos| pos + 1)
+                                    .unwrap_or(
+                                        tokens
+                                            .iter()
+                                            .position(|tok| tok == &Token::Punctuation('}'))
+                                            .map(|pos| pos + 1)
+                                            .unwrap(),
+                                    ))],
+                            );
 
                             pos += size;
 
-                            Some(
-                                match statement {
-                                    ASTUnit::Block(block) => block,
-                                    _ => unreachable!(),
-                                }
-                                .swap_remove(0),
-                            )
+                            Some(statement)
                         } else {
                             None
                         };
@@ -168,7 +176,7 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                         ASTUnit::Statement(Statement::ControlFlow {
                             condition: Rc::new(condition),
                             execute: Rc::new(block),
-                            alternative,
+                            alternative: alternative.map(|alt| Rc::new(alt)),
                         })
                     }
                     parsers::Keyword::ControlFlowElse => {
