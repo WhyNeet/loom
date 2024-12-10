@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use lexer::lexer::lexer;
 use parser::{
     ast::{
@@ -19,26 +21,24 @@ pub fn expression_parser_works() {
     assert_eq!(
         ast,
         ASTUnit::Expression(Expression::BinaryExpression {
-            left: Box::new(ASTUnit::Expression(Expression::BinaryExpression {
-                left: Box::new(ASTUnit::Expression(Expression::BinaryExpression {
-                    left: Box::new(ASTUnit::Expression(Expression::BinaryExpression {
-                        left: Box::new(ASTUnit::Expression(
-                            Expression::Literal(Literal::Int32(1),)
+            left: Rc::new(ASTUnit::Expression(Expression::BinaryExpression {
+                left: Rc::new(ASTUnit::Expression(Expression::BinaryExpression {
+                    left: Rc::new(ASTUnit::Expression(Expression::BinaryExpression {
+                        left: Rc::new(ASTUnit::Expression(Expression::Literal(Literal::Int32(1),))),
+                        right: Rc::new(ASTUnit::Expression(
+                            Expression::Literal(Literal::Int32(2),)
                         )),
-                        right: Box::new(ASTUnit::Expression(Expression::Literal(Literal::Int32(
-                            2
-                        ),))),
                         operation: Operation::Algebraic(AlgebraicOperation::Addition,),
                     })),
-                    right: Box::new(ASTUnit::Expression(Expression::Literal(Literal::Int32(3),))),
+                    right: Rc::new(ASTUnit::Expression(Expression::Literal(Literal::Int32(3),))),
                     operation: Operation::Algebraic(AlgebraicOperation::Multiplication,),
                 })),
-                right: Box::new(ASTUnit::Expression(Expression::Identifier("x".to_string()))),
+                right: Rc::new(ASTUnit::Expression(Expression::Identifier("x".to_string()))),
                 operation: Operation::Logical(LogicalOperation::Greater),
             })),
-            right: Box::new(ASTUnit::Expression(Expression::BinaryExpression {
-                left: Box::new(ASTUnit::Expression(Expression::Identifier("x".to_string()))),
-                right: Box::new(ASTUnit::Expression(Expression::Identifier("a".to_string()))),
+            right: Rc::new(ASTUnit::Expression(Expression::BinaryExpression {
+                left: Rc::new(ASTUnit::Expression(Expression::Identifier("x".to_string()))),
+                right: Rc::new(ASTUnit::Expression(Expression::Identifier("a".to_string()))),
                 operation: Operation::Logical(LogicalOperation::Greater),
             })),
             operation: Operation::Logical(LogicalOperation::Or),

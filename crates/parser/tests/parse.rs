@@ -18,6 +18,8 @@ pub fn parser_works() {
         } else {
           return 5;
         }
+
+        let x = 1;
       }
     "#;
 
