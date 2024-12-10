@@ -5,8 +5,6 @@ use lexer::lexer::token::Token;
 
 use crate::ast::{
     declaration::Declaration,
-    expression::Expression,
-    operation::Operation,
     statement::{LoopStatement, Statement},
     unit::{ASTUnit, Block},
 };
@@ -143,28 +141,45 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                                     .unwrap(),
                             ))];
 
-                        pos += block.len();
-
-                        let (block, _) = parse(block);
+                        let (block, size) = parse(block);
+                        pos += size;
 
                         // an else clause is present
-                        let alternative = if tokens[pos] == Token::Keyword("else".to_string()) {
+                        let alternative = if pos < tokens.len()
+                            && tokens[pos] == Token::Keyword("else".to_string())
+                        {
                             pos += 1;
-                            let (statement, size) = parse(
-                                &tokens[pos..(pos
+                            let mut alt_tokens = &tokens[pos..(pos
+                                + traversal::traverse_till_root_par(
+                                    &tokens[pos..],
+                                    (Token::Punctuation('{'), Token::Punctuation('}')),
+                                )
+                                .map(|pos| pos + 1)
+                                .unwrap_or(
+                                    tokens
+                                        .iter()
+                                        .position(|tok| tok == &Token::Punctuation('}'))
+                                        .map(|pos| pos + 1)
+                                        .unwrap(),
+                                ))];
+
+                            // it works
+                            // dont touch it
+                            while (pos + alt_tokens.len()) < tokens.len()
+                                && tokens[pos + alt_tokens.len()]
+                                    == Token::Keyword("else".to_string())
+                            {
+                                alt_tokens = &tokens[pos..(pos
+                                    + alt_tokens.len()
                                     + traversal::traverse_till_root_par(
-                                        &tokens[pos..],
+                                        &tokens[(pos + alt_tokens.len())..],
                                         (Token::Punctuation('{'), Token::Punctuation('}')),
                                     )
                                     .map(|pos| pos + 1)
-                                    .unwrap_or(
-                                        tokens
-                                            .iter()
-                                            .position(|tok| tok == &Token::Punctuation('}'))
-                                            .map(|pos| pos + 1)
-                                            .unwrap(),
-                                    ))],
-                            );
+                                    .unwrap())];
+                            }
+
+                            let (statement, size) = parse(alt_tokens);
 
                             pos += size;
 
@@ -180,7 +195,7 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                         })
                     }
                     parsers::Keyword::ControlFlowElse => {
-                        todo!()
+                        unreachable!()
                     }
                     parsers::Keyword::FunctionDeclaration => {
                         // fun keyword
