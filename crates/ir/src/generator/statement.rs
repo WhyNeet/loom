@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use inkwell::{
+    basic_block::BasicBlock,
     builder::Builder,
     context::Context,
     values::{BasicValue, FunctionValue},
@@ -52,57 +53,104 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                 condition,
                 execute,
                 alternative,
-            } => {
-                let cmp = self
-                    .expression_gen
-                    .generate_from_ast(
-                        "cf_cr",
-                        match &**condition {
-                            ASTUnit::Expression(expr) => expr,
-                            _ => unreachable!(),
-                        },
-                    )
-                    .unwrap()
-                    .into_int_value();
-
-                let current_block = self.builder.get_insert_block();
-
-                // generate a block for what's after if-else clause
-                let continue_block = self.context.append_basic_block(self.function, "bb");
-                self.builder.position_at_end(continue_block);
-
-                let next = ASTUnit::Block(next);
-                self.fn_gen.generate_from_ast(Rc::new(next));
-
-                // generate a then-block
-                let then_block = self.context.append_basic_block(self.function, "bb");
-                self.builder.position_at_end(then_block);
-
-                self.fn_gen.generate_from_ast(Rc::clone(execute));
-                self.builder
-                    .build_unconditional_branch(continue_block)
-                    .unwrap();
-
-                let else_block = if let Some(alternative) = alternative {
-                    // generate an alternative block
-                    let else_block = self.context.append_basic_block(self.function, "bb");
-                    self.builder.position_at_end(else_block);
-                    self.fn_gen.generate_from_ast(Rc::clone(alternative));
-                    self.builder
-                        .build_unconditional_branch(continue_block)
-                        .unwrap();
-
-                    Some(else_block)
-                } else {
-                    None
-                };
-
-                self.builder.position_at_end(current_block.unwrap());
-                self.builder
-                    .build_conditional_branch(cmp, then_block, else_block.unwrap_or(continue_block))
-                    .unwrap();
-            }
+            } => self.generate_control_flow(condition, execute, alternative, next, None),
             other => panic!("{other:?} is not implemented yet"),
         }
+    }
+
+    fn generate_control_flow(
+        &self,
+        condition: &'ctx Rc<ASTUnit>,
+        execute: &Rc<ASTUnit>,
+        alternative: &'ctx Option<Rc<ASTUnit>>,
+        next: Vec<Rc<ASTUnit>>,
+        continue_block: Option<BasicBlock<'ctx>>,
+    ) {
+        let cmp = self
+            .expression_gen
+            .generate_from_ast(
+                "cf_cr",
+                match &**condition {
+                    ASTUnit::Expression(expr) => expr,
+                    _ => unreachable!(),
+                },
+            )
+            .unwrap()
+            .into_int_value();
+
+        // save the control flow entry block
+        // later append the "br" instruction with
+        // both branches provided
+        let cf_entry_block = self.builder.get_insert_block().unwrap();
+
+        // whatever is after the control flow statement
+        let continue_block = if let Some(block) = continue_block {
+            block
+        } else {
+            let continue_block = self.context.append_basic_block(self.function, "continue");
+            self.builder.position_at_end(continue_block);
+
+            let next_ast = ASTUnit::Block(next.iter().map(Rc::clone).collect());
+            self.fn_gen.generate_from_ast(Rc::new(next_ast));
+
+            continue_block
+        };
+
+        // the block to execute if condition is true
+        let execute_block = self.context.append_basic_block(self.function, "execute");
+        self.builder.position_at_end(execute_block);
+
+        let execute_ast = Rc::clone(execute);
+        self.fn_gen.generate_from_ast(execute_ast);
+
+        self.builder
+            .build_unconditional_branch(continue_block)
+            .unwrap();
+
+        // the block to execute if condition is false
+        let alternative_block = if let Some(alternative) = alternative {
+            let alternative_block = self
+                .context
+                .append_basic_block(self.function, "alternative");
+            self.builder.position_at_end(alternative_block);
+
+            match alternative.as_ref() {
+                ASTUnit::Block(block) => match block[0].as_ref() {
+                    ASTUnit::Statement(Statement::ControlFlow {
+                        condition,
+                        execute,
+                        alternative,
+                    }) => {
+                        self.generate_control_flow(
+                            condition,
+                            execute,
+                            alternative,
+                            next,
+                            Some(continue_block),
+                        );
+                    }
+                    _ => {
+                        self.fn_gen.generate_from_ast(Rc::clone(alternative));
+                        self.builder
+                            .build_unconditional_branch(continue_block)
+                            .unwrap();
+                    }
+                },
+                _ => unreachable!(),
+            };
+
+            Some(alternative_block)
+        } else {
+            None
+        };
+
+        self.builder.position_at_end(cf_entry_block);
+        self.builder
+            .build_conditional_branch(
+                cmp,
+                execute_block,
+                alternative_block.unwrap_or(continue_block),
+            )
+            .unwrap();
     }
 }
