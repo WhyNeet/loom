@@ -1,13 +1,6 @@
-fun add(x: i32) -> i32 {
-  return x + 1;
-}
-
 fun main() {
-  const a = 1;
-  let b = a + 1;
-  let c = a + -b;
+  const a = 2;
+  let b = 1 + a;
 
-  c = 10;
-
-  const final = add(c + 1);
+  let c = -b + a + 5;
 }

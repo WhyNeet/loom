@@ -1,0 +1,13 @@
+fun main() {
+  let b = 1;
+
+  if b < 5 {
+    let c = 6;
+  } else if b < 10 {
+    let c = 88;
+  } else {
+    let c = 190;
+  }
+
+  let x = 2;
+}
