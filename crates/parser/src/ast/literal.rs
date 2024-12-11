@@ -22,6 +22,7 @@ impl Literal {
         match value {
             lexer::token::Literal::String(string) => Self::String(string.clone()),
             lexer::token::Literal::Number(num_str) => Self::Int32(num_str.parse().unwrap()),
+            lexer::token::Literal::Boolean(bool) => Self::Bool(bool.parse().unwrap()),
         }
     }
 }
