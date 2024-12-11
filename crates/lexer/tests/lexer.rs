@@ -1,6 +1,6 @@
 use lexer::lexer::{
-    lexer,
     token::{Literal, Token},
+    Lexer,
 };
 
 #[test]
@@ -8,9 +8,10 @@ pub fn lexer_works() {
     let code = r#"let a = -1;
 let b = 2; // this is a comment
 let sum = a + b / 2.5;
+let x = true;
 "#;
 
-    let tokens = lexer(code);
+    let tokens = Lexer::new().run(code);
 
     assert_eq!(tokens[0], Token::Keyword("let".to_string()));
     assert_eq!(tokens[1], Token::Identifier("a".to_string()));
@@ -38,5 +39,12 @@ let sum = a + b / 2.5;
         Token::Literal(Literal::Number("2.5".to_string()))
     );
     assert_eq!(tokens[19], Token::Punctuation(';'));
-    assert_eq!(tokens[20], Token::EOF);
+    assert_eq!(tokens[20], Token::Keyword("let".to_string()));
+    assert_eq!(tokens[21], Token::Identifier("x".to_string()));
+    assert_eq!(tokens[22], Token::Operator("=".to_string()));
+    assert_eq!(
+        tokens[23],
+        Token::Literal(Literal::Boolean("true".to_string()))
+    );
+    assert_eq!(tokens.last().unwrap(), &Token::EOF);
 }
