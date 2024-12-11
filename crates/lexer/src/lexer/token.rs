@@ -1,5 +1,3 @@
-use std::mem;
-
 use common::types::Type;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -65,37 +63,9 @@ impl Token {
     }
 }
 
-// impl PartialEq for Token {
-//     fn eq(&self, other: &Self) -> bool {
-//         if mem::discriminant(self) != mem::discriminant(other) {
-//             return false;
-//         }
-
-//         match self {
-//             Self::EOF => true,
-//             Self::Comment(comment) => comment == other.as_comment().unwrap(),
-//             Self::Identifier(ident) => ident == other.as_identifier().unwrap(),
-//             Self::Keyword(keyword) => keyword == other.as_keyword().unwrap(),
-//             Self::Literal(literal) => literal == other.as_literal().unwrap(),
-//             Self::Operator(operator) => operator == other.as_operator().unwrap(),
-//             Self::Punctuation(punct) => *punct == other.as_punctuation().unwrap(),
-//             Self::Type(t) => t == other.as_type().unwrap(),
-//         }
-//     }
-// }
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
     String(String),
     Number(String),
+    Boolean(String),
 }
-
-// impl PartialEq for Literal {
-//     fn eq(&self, other: &Self) -> bool {
-//         match (self, other) {
-//             (Self::String(s1), Self::String(s2)) => s1 == s2,
-//             (Self::Number(n1), Self::Number(n2)) => n1 == n2,
-//             _ => false,
-//         }
-//     }
-// }

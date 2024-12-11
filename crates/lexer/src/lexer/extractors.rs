@@ -111,3 +111,13 @@ pub fn extract_identifier(input: &str) -> String {
 
     ident
 }
+
+pub fn extract_boolean(input: &str) -> Option<String> {
+    if input.starts_with("true") {
+        Some("true".to_string())
+    } else if input.starts_with("false") {
+        Some("false".to_string())
+    } else {
+        None
+    }
+}
