@@ -6,7 +6,10 @@ use inkwell::{
     context::Context,
     values::{BasicValue, FunctionValue},
 };
-use parser::ast::{statement::Statement, unit::ASTUnit};
+use parser::ast::{
+    statement::{LoopStatement, Statement},
+    unit::ASTUnit,
+};
 
 use super::{expression::LLVMExpressionGenerator, function::LLVMFunctionGenerator};
 
@@ -49,12 +52,56 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                     .build_return(ret_value.as_ref().map(|val| val as &dyn BasicValue))
                     .unwrap();
             }
+            Statement::Loop(stmt) => self.generate_loop(stmt, next),
             Statement::ControlFlow {
                 condition,
                 execute,
                 alternative,
             } => self.generate_control_flow(condition, execute, alternative, next, None),
-            other => panic!("{other:?} is not implemented yet"),
+        }
+    }
+
+    fn generate_loop(&self, stmt: &'ctx LoopStatement, next: Vec<Rc<ASTUnit>>) {
+        match stmt {
+            LoopStatement::While { condition, execute } => {
+                let entry = self.builder.get_insert_block().unwrap();
+
+                let header = self
+                    .context
+                    .append_basic_block(self.function, "while.header");
+                self.builder.position_at_end(header);
+
+                let body = self.context.append_basic_block(self.function, "body");
+                self.builder.position_at_end(body);
+
+                self.fn_gen.generate_from_ast(Rc::clone(execute));
+                self.builder.build_unconditional_branch(header).unwrap();
+
+                let exit = self.context.append_basic_block(self.function, "exit");
+                self.builder.position_at_end(exit);
+
+                self.fn_gen.generate_from_ast(Rc::new(ASTUnit::Block(next)));
+
+                self.builder.position_at_end(header);
+                let cmp = self
+                    .expression_gen
+                    .generate_from_ast(
+                        "cmp_res",
+                        match condition.as_ref() {
+                            ASTUnit::Expression(expr) => expr,
+                            _ => unreachable!(),
+                        },
+                    )
+                    .unwrap()
+                    .into_int_value();
+
+                self.builder
+                    .build_conditional_branch(cmp, body, exit)
+                    .unwrap();
+
+                self.builder.position_at_end(entry);
+                self.builder.build_unconditional_branch(header).unwrap();
+            }
         }
     }
 
