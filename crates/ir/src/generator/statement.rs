@@ -74,13 +74,14 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                 let body = self.context.append_basic_block(self.function, "body");
                 self.builder.position_at_end(body);
 
-                self.fn_gen.generate_from_ast(Rc::clone(execute));
+                self.fn_gen.internal_generate_from_ast(Rc::clone(execute));
                 self.builder.build_unconditional_branch(header).unwrap();
 
                 let exit = self.context.append_basic_block(self.function, "exit");
                 self.builder.position_at_end(exit);
 
-                self.fn_gen.generate_from_ast(Rc::new(ASTUnit::Block(next)));
+                self.fn_gen
+                    .internal_generate_from_ast(Rc::new(ASTUnit::Block(next)));
 
                 self.builder.position_at_end(header);
                 let cmp = self
@@ -101,6 +102,10 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
 
                 self.builder.position_at_end(entry);
                 self.builder.build_unconditional_branch(header).unwrap();
+
+                // position at the end of exit
+                // because entry block will not execute instructions after "br"
+                self.builder.position_at_end(exit);
             }
         }
     }
@@ -138,7 +143,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
             self.builder.position_at_end(continue_block);
 
             let next_ast = ASTUnit::Block(next.iter().map(Rc::clone).collect());
-            self.fn_gen.generate_from_ast(Rc::new(next_ast));
+            self.fn_gen.internal_generate_from_ast(Rc::new(next_ast));
 
             continue_block
         };
@@ -148,7 +153,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
         self.builder.position_at_end(execute_block);
 
         let execute_ast = Rc::clone(execute);
-        self.fn_gen.generate_from_ast(execute_ast);
+        self.fn_gen.internal_generate_from_ast(execute_ast);
 
         self.builder
             .build_unconditional_branch(continue_block)
@@ -177,7 +182,8 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                         );
                     }
                     _ => {
-                        self.fn_gen.generate_from_ast(Rc::clone(alternative));
+                        self.fn_gen
+                            .internal_generate_from_ast(Rc::clone(alternative));
                         self.builder
                             .build_unconditional_branch(continue_block)
                             .unwrap();
@@ -199,5 +205,9 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                 alternative_block.unwrap_or(continue_block),
             )
             .unwrap();
+
+        // position at the end of continue
+        // because entry block will not execute instructions after "br"
+        self.builder.position_at_end(continue_block);
     }
 }

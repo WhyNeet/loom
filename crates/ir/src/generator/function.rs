@@ -58,12 +58,12 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
 
     pub fn generate_from_ast(&'ctx self, ast: Rc<ASTUnit>) {
         self.internal_generate_from_ast(ast);
-        // if self.is_void {
-        //     self.builder.build_return(None).unwrap();
-        // }
+        if self.is_void {
+            self.builder.build_return(None).unwrap();
+        }
     }
 
-    fn internal_generate_from_ast(&'ctx self, ast: Rc<ASTUnit>) {
+    pub fn internal_generate_from_ast(&'ctx self, ast: Rc<ASTUnit>) {
         let root = match unsafe { (ast.as_ref() as *const ASTUnit).as_ref().unwrap() } {
             ASTUnit::Block(root) => root,
             _ => panic!("expected root block"),
