@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use lexer::lexer::lexer;
+use lexer::lexer::Lexer;
 use parser::{
     ast::{
         expression::Expression,
@@ -15,7 +15,7 @@ use parser::{
 pub fn expression_parser_works() {
     let input = r#"(1 + 2) * 3 > x || x > a"#;
 
-    let tokens = lexer(input);
+    let tokens = Lexer::new().run(input);
     let (ast, expr_size) = parsers::parse_expression(&tokens);
 
     assert_eq!(

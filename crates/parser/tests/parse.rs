@@ -1,4 +1,4 @@
-use lexer::lexer;
+use ::lexer::lexer::Lexer;
 use parser::parser;
 
 #[test]
@@ -23,7 +23,7 @@ pub fn parser_works() {
       }
     "#;
 
-    let tokens = lexer::lexer(input);
+    let tokens = Lexer::new().run(input);
 
     let (ast, _) = parser::parse(&tokens);
 
