@@ -1,10 +1,11 @@
 use std::rc::Rc;
 
-use super::unit::{ASTUnit, Block};
+use super::unit::ASTUnit;
 
 #[derive(Debug, PartialEq)]
 pub enum Statement {
-    Return(Block),
+    Return(Rc<ASTUnit>),
+    ImplicitReturn(Rc<ASTUnit>),
     ControlFlow {
         condition: Rc<ASTUnit>,
         execute: Rc<ASTUnit>,

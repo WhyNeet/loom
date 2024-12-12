@@ -6,7 +6,7 @@ use lexer::lexer::token::Token;
 use crate::ast::{
     declaration::Declaration,
     statement::{LoopStatement, Statement},
-    unit::{ASTUnit, Block},
+    unit::ASTUnit,
 };
 
 use super::parsers;
@@ -73,7 +73,7 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
 
                         let expression = parsers::parse_expression(expression);
 
-                        ASTUnit::Statement(Statement::Return(vec![Rc::new(expression.0)]))
+                        ASTUnit::Statement(Statement::Return(Rc::new(expression.0)))
                     }
                     parsers::Keyword::While => {
                         pos += 1;
@@ -278,36 +278,20 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                 units.push(Rc::new(unit));
             }
             Token::Identifier(_ident) => {
-                // this is probably an assignment or function call
-
-                // let unit = match &tokens[pos] {
-                //     Token::Operator(op) => {
-                //         let operation = Operation::from_str(&op).unwrap();
-                //         pos += 1;
-                //         let expression = &tokens[pos..(pos
-                //             + tokens[pos..]
-                //                 .iter()
-                //                 .position(|tok| tok == &Token::Punctuation(';'))
-                //                 .map(|pos| pos + 1)
-                //                 .unwrap_or(tokens.len() - pos))];
-                //         pos += expression.len();
-                //         let expression = parsers::parse_expression(expression);
-                //         ASTUnit::Expression(Expression::BinaryExpression {
-                //             left: Box::new(ASTUnit::Expression(Expression::Identifier(
-                //                 ident.to_string(),
-                //             ))),
-                //             right: Box::new(expression.0),
-                //             operation,
-                //         })
-                //     }
-                //     token => panic!("not implemented: {token:?}"),
-                // };
-
-                let (unit, size) = parsers::parse_expression(&tokens[pos..]);
-
+                let (expression, size) = parsers::parse_expression(&tokens[pos..]);
                 pos += size;
 
+                let unit = if tokens[pos] != Token::Punctuation(';') {
+                    // if the expression is in the end of the code block
+                    ASTUnit::Statement(Statement::ImplicitReturn(Rc::new(expression)))
+                } else {
+                    expression
+                };
+
                 units.push(Rc::new(unit));
+            }
+            Token::Literal(_literal) => {
+                pos += 1;
             }
             _ => pos += 1,
         }
