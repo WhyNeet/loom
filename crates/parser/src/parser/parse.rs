@@ -12,6 +12,16 @@ use crate::ast::{
 use super::parsers;
 
 pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
+    let tokens = if tokens.first().is_some()
+        && tokens.first().unwrap() == &Token::Punctuation('{')
+        && tokens.last().is_some()
+        && tokens.last().unwrap() == &Token::Punctuation('}')
+    {
+        &tokens[1..(tokens.len() - 1)]
+    } else {
+        tokens
+    };
+
     let mut units = Vec::new();
     let mut pos = 0;
 
@@ -281,7 +291,7 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                 let (expression, size) = parsers::parse_expression(&tokens[pos..]);
                 pos += size;
 
-                let unit = if tokens[pos] != Token::Punctuation(';') {
+                let unit = if pos >= tokens.len() || tokens[pos] != Token::Punctuation(';') {
                     // if the expression is in the end of the code block
                     ASTUnit::Statement(Statement::ImplicitReturn(Rc::new(expression)))
                 } else {
@@ -292,6 +302,21 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
             }
             Token::Literal(_literal) => {
                 pos += 1;
+            }
+            Token::Punctuation('{') => {
+                let (unit, size) = parsers::parse_expression(
+                    &tokens[pos..(pos
+                        + traversal::traverse_till_root_par(
+                            &tokens[pos..],
+                            (Token::Punctuation('{'), Token::Punctuation('}')),
+                        )
+                        .map(|pos| pos + 1)
+                        .unwrap())],
+                );
+
+                pos += size;
+
+                units.push(Rc::new(unit));
             }
             _ => pos += 1,
         }
