@@ -66,7 +66,7 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
         match structure {
             RecognizableStructure::Block((start, end)) => {
                 let (unit, size) = parse(&input[(start + 1)..(end - 1)]);
-                return (unit, size);
+                return (unit, size + 2);
             }
             RecognizableStructure::FunctionInvokation((start, end)) => {
                 let identifier = input[start].as_identifier().unwrap().to_string();

@@ -12,11 +12,14 @@ use crate::ast::{
 use super::parsers;
 
 pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
+    let mut add = 0;
+
     let tokens = if tokens.first().is_some()
         && tokens.first().unwrap() == &Token::Punctuation('{')
         && tokens.last().is_some()
         && tokens.last().unwrap() == &Token::Punctuation('}')
     {
+        add += 2;
         &tokens[1..(tokens.len() - 1)]
     } else {
         tokens
@@ -322,5 +325,5 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
         }
     }
 
-    (ASTUnit::Block(units), pos)
+    (ASTUnit::Block(units), pos + add)
 }
