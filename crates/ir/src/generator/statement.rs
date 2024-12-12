@@ -41,7 +41,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
     pub fn generate_from_ast(&self, stmt: &'ctx Statement, next: Vec<Rc<ASTUnit>>) {
         match stmt {
             Statement::Return(ret) => {
-                let ret_value = match &ret[0].as_ref() {
+                let ret_value = match ret.as_ref() {
                     ASTUnit::Expression(expr) => {
                         self.expression_gen.generate_from_ast("ret_res", &expr)
                     }
@@ -58,6 +58,18 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                 execute,
                 alternative,
             } => self.generate_control_flow(condition, execute, alternative, next, None),
+            Statement::ImplicitReturn(ret) => {
+                let ret_value = match ret.as_ref() {
+                    ASTUnit::Expression(expr) => {
+                        self.expression_gen.generate_from_ast("ret_res", &expr)
+                    }
+                    _ => todo!(),
+                };
+
+                self.builder
+                    .build_return(ret_value.as_ref().map(|val| val as &dyn BasicValue))
+                    .unwrap();
+            }
         }
     }
 
