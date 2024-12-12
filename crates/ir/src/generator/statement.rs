@@ -59,7 +59,6 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                 alternative,
             } => self.generate_control_flow(condition, execute, alternative, next, None),
             Statement::ImplicitReturn(ret) => {
-                println!("generate implicit return");
                 let ret_value = match ret.as_ref() {
                     ASTUnit::Expression(expr) => {
                         self.expression_gen.generate_from_ast("ret_res", &expr)

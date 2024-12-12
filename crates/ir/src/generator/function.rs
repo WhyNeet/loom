@@ -137,7 +137,6 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                         match stmt {
                             Statement::ImplicitReturn(ret) => match ret.as_ref() {
                                 ASTUnit::Expression(expr) => {
-                                    println!("store implicit return: {store_return}");
                                     let value = self.expr_gen.generate_from_ast(store_return, expr);
                                     if let Some(value) = value {
                                         self.ssa
