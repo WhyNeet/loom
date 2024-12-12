@@ -1,7 +1,7 @@
 use std::{env, fs, path::PathBuf, rc::Rc};
 
 use inkwell::context::Context;
-use lexer::lexer::lexer;
+use lexer::lexer::Lexer;
 use parser::parser::parse;
 
 fn main() {
@@ -9,7 +9,7 @@ fn main() {
     let filename = PathBuf::from(filename);
     let contents = fs::read_to_string(&filename).unwrap();
 
-    let tokens = lexer(&contents);
+    let tokens = Lexer::new().run(&contents);
     let (ast, _) = parse(&tokens);
 
     let module_name = filename
