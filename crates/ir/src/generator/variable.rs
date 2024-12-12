@@ -8,9 +8,9 @@ use parser::ast::{
 };
 
 use super::{
-    common::{generate_for_literal, VariableData},
+    common::VariableData,
     expression::LLVMExpressionGenerator,
-    function::{StackFrame, SSA},
+    function::{LLVMFunctionGenerator, StackFrame, SSA},
     module::FunctionStack,
 };
 
@@ -20,6 +20,7 @@ pub struct LLVMVariableGenerator<'ctx> {
     stack_frame: Rc<RefCell<StackFrame<'ctx>>>,
     ssa: Rc<RefCell<SSA<'ctx>>>,
     function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
+    fn_gen: &'ctx LLVMFunctionGenerator<'ctx>,
 }
 
 impl<'ctx> LLVMVariableGenerator<'ctx> {
@@ -29,6 +30,7 @@ impl<'ctx> LLVMVariableGenerator<'ctx> {
         stack_frame: Rc<RefCell<StackFrame<'ctx>>>,
         ssa: Rc<RefCell<SSA<'ctx>>>,
         function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
+        fn_gen: &'ctx LLVMFunctionGenerator<'ctx>,
     ) -> Self {
         Self {
             builder,
@@ -36,6 +38,7 @@ impl<'ctx> LLVMVariableGenerator<'ctx> {
             stack_frame,
             ssa,
             function_stack,
+            fn_gen,
         }
     }
 
@@ -56,7 +59,17 @@ impl<'ctx> LLVMVariableGenerator<'ctx> {
                 Rc::clone(&self.function_stack),
             )
             .generate_from_ast(&format!("{identifier}_tmp"), expr),
-            other => panic!("exprected expression, got: {other:?}"),
+            ASTUnit::Block(block) => {
+                let store_in = format!("{}_block_res", identifier.as_str());
+
+                self.fn_gen.internal_generate_from_ast(
+                    Rc::new(ASTUnit::Block(block.clone())),
+                    Some(&store_in),
+                );
+
+                self.ssa.borrow().get(&store_in).map(|val| *val)
+            }
+            other => panic!("expected expression, got: {other:?}"),
         }
         .unwrap();
 

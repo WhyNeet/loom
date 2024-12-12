@@ -59,6 +59,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                 alternative,
             } => self.generate_control_flow(condition, execute, alternative, next, None),
             Statement::ImplicitReturn(ret) => {
+                println!("generate implicit return");
                 let ret_value = match ret.as_ref() {
                     ASTUnit::Expression(expr) => {
                         self.expression_gen.generate_from_ast("ret_res", &expr)
@@ -86,14 +87,15 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                 let body = self.context.append_basic_block(self.function, "body");
                 self.builder.position_at_end(body);
 
-                self.fn_gen.internal_generate_from_ast(Rc::clone(execute));
+                self.fn_gen
+                    .internal_generate_from_ast(Rc::clone(execute), None);
                 self.builder.build_unconditional_branch(header).unwrap();
 
                 let exit = self.context.append_basic_block(self.function, "exit");
                 self.builder.position_at_end(exit);
 
                 self.fn_gen
-                    .internal_generate_from_ast(Rc::new(ASTUnit::Block(next)));
+                    .internal_generate_from_ast(Rc::new(ASTUnit::Block(next)), None);
 
                 self.builder.position_at_end(header);
                 let cmp = self
@@ -155,7 +157,8 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
             self.builder.position_at_end(continue_block);
 
             let next_ast = ASTUnit::Block(next.iter().map(Rc::clone).collect());
-            self.fn_gen.internal_generate_from_ast(Rc::new(next_ast));
+            self.fn_gen
+                .internal_generate_from_ast(Rc::new(next_ast), None);
 
             continue_block
         };
@@ -165,7 +168,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
         self.builder.position_at_end(execute_block);
 
         let execute_ast = Rc::clone(execute);
-        self.fn_gen.internal_generate_from_ast(execute_ast);
+        self.fn_gen.internal_generate_from_ast(execute_ast, None);
 
         self.builder
             .build_unconditional_branch(continue_block)
@@ -195,7 +198,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                     }
                     _ => {
                         self.fn_gen
-                            .internal_generate_from_ast(Rc::clone(alternative));
+                            .internal_generate_from_ast(Rc::clone(alternative), None);
                         self.builder
                             .build_unconditional_branch(continue_block)
                             .unwrap();
