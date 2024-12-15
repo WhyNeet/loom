@@ -70,10 +70,10 @@ pub fn parse_expression(input: &[Token]) -> (ASTUnit, usize) {
             }
             RecognizableStructure::FunctionInvokation((start, end)) => {
                 let identifier = input[start].as_identifier().unwrap().to_string();
-                let params: Vec<ASTUnit> = input[(start + 1)..end]
+                let params: Vec<Rc<ASTUnit>> = input[(start + 1)..end]
                     .split(|tok| tok == &Token::Punctuation(','))
                     .map(|expr| parse_expression(expr))
-                    .map(|(expr, _)| expr)
+                    .map(|(expr, _)| Rc::new(expr))
                     .collect();
 
                 return (

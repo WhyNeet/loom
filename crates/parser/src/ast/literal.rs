@@ -1,6 +1,6 @@
 use lexer::lexer;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Literal {
     String(String),
     Int8(i8),

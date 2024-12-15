@@ -13,6 +13,6 @@ pub enum Expression {
     Identifier(String),
     FunctionInvokation {
         function_name: String,
-        parameters: Vec<ASTUnit>,
+        parameters: Vec<Rc<ASTUnit>>,
     },
 }

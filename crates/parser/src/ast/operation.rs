@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Operation {
     Algebraic(AlgebraicOperation),
     Logical(LogicalOperation),
@@ -14,7 +14,7 @@ impl Operation {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum AssignmentOperation {
     Assign,
     AdditionAssign,
@@ -36,7 +36,7 @@ impl AssignmentOperation {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum AlgebraicOperation {
     Addition,
     Subtraction,
