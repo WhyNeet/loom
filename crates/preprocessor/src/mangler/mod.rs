@@ -13,13 +13,6 @@ impl Mangler {
         }
     }
 
-    pub fn submangler(&self) -> Self {
-        Self {
-            gen: self.gen.clone(),
-            mangle_map: RefCell::new(HashMap::new()),
-        }
-    }
-
     pub fn mangle(&self, identifier: Cow<String>) -> String {
         if let Some(identifier) = self.mangle_map.borrow().get(identifier.as_str()) {
             return identifier.clone();
@@ -34,6 +27,10 @@ impl Mangler {
             .insert(identifier.to_string(), new_ident.clone());
 
         new_ident
+    }
+
+    pub fn is_mangled(&self, identifier: &str) -> bool {
+        self.mangle_map.borrow().contains_key(identifier)
     }
 
     pub fn forget(&self, identifier: &str) -> Option<String> {

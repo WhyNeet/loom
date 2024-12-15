@@ -1,7 +1,8 @@
 pub mod last;
 pub mod mangler;
+pub mod scope;
 
-use std::{borrow::Cow, cell::RefCell, collections::HashMap, rc::Rc};
+use std::{borrow::Cow, collections::HashMap, rc::Rc};
 
 use last::{
     declaration::{Declaration, VariableAllocation},
@@ -12,6 +13,7 @@ use last::{
 };
 use mangler::Mangler;
 use parser::ast::{unit::ASTUnit, AbstractSyntaxTree};
+use scope::{Remapper, Scope};
 
 pub struct Preprocessor {
     fn_mangler: Mangler,
@@ -30,10 +32,12 @@ impl Preprocessor {
             _ => unreachable!(),
         };
 
+        let root_scope = Scope::new();
+
         let last_root = root
             .iter()
             .map(Rc::clone)
-            .map(|unit| self.run_internal(unit, &Mangler::new(), None))
+            .map(|unit| self.run_internal(unit, &Mangler::new(), None, Some(&root_scope), None))
             .flatten()
             .collect();
 
@@ -47,18 +51,33 @@ impl Preprocessor {
         unit: Rc<ASTUnit>,
         mangler: &Mangler,
         store_result_in: Option<String>,
+        scope: Option<&Scope>,
+        remap: Option<&Remapper>,
     ) -> Vec<LASTUnit> {
         match unit.as_ref() {
-            ASTUnit::Declaration(declaration) => self.run_declaration(declaration, mangler),
+            ASTUnit::Declaration(declaration) => {
+                self.run_declaration(declaration, mangler, scope.unwrap_or(&Scope::new()), remap)
+            }
             ASTUnit::Expression(expression) => self.run_expression(
                 expression,
                 store_result_in.unwrap_or_else(|| mangler.rng()),
                 mangler,
+                remap,
             ),
-            ASTUnit::Statement(statement) => {
-                self.run_statement(statement, mangler, store_result_in)
-            }
-            ASTUnit::Block(block) => self.run_block(block, mangler, store_result_in),
+            ASTUnit::Statement(statement) => self.run_statement(
+                statement,
+                mangler,
+                store_result_in,
+                scope.unwrap_or(&Scope::new()),
+                remap,
+            ),
+            ASTUnit::Block(block) => self.run_block(
+                block,
+                mangler,
+                store_result_in,
+                scope.unwrap_or(&Scope::new()),
+                remap,
+            ),
         }
     }
 
@@ -67,11 +86,23 @@ impl Preprocessor {
         block: &Vec<Rc<ASTUnit>>,
         mangler: &Mangler,
         store_result_in: Option<String>,
+        scope: &Scope,
+        remap: Option<&Remapper>,
     ) -> Vec<LASTUnit> {
+        let remaps_new = Remapper::new();
+
         block
             .iter()
             .map(Rc::clone)
-            .map(|unit| self.run_internal(unit, mangler, store_result_in.clone()))
+            .map(|unit| {
+                self.run_internal(
+                    unit,
+                    mangler,
+                    store_result_in.clone(),
+                    Some(scope),
+                    Some(remap.unwrap_or(&remaps_new)),
+                )
+            })
             .flatten()
             .collect()
     }
@@ -81,22 +112,34 @@ impl Preprocessor {
         statement: &parser::ast::statement::Statement,
         mangler: &Mangler,
         store_result_in: Option<String>,
+        scope: &Scope,
+        remap: Option<&Remapper>,
     ) -> Vec<LASTUnit> {
         let mut last_units = vec![];
 
         let statement_unit = match statement {
             parser::ast::statement::Statement::Return(ret) => {
                 let ret_ssa_name = mangler.rng();
-                let mut ret_value =
-                    self.run_internal(Rc::clone(ret), mangler, Some(ret_ssa_name.clone()));
+                let mut ret_value = self.run_internal(
+                    Rc::clone(ret),
+                    mangler,
+                    Some(ret_ssa_name.clone()),
+                    Some(scope),
+                    remap,
+                );
                 last_units.append(&mut ret_value);
 
                 LASTUnit::Statement(Statement::Return(Expression::Identifier(ret_ssa_name)))
             }
             parser::ast::statement::Statement::ImplicitReturn(ret) => {
                 let ret_ssa_name = mangler.rng();
-                let mut ret_value =
-                    self.run_internal(Rc::clone(ret), mangler, Some(ret_ssa_name.clone()));
+                let mut ret_value = self.run_internal(
+                    Rc::clone(ret),
+                    mangler,
+                    Some(ret_ssa_name.clone()),
+                    Some(scope),
+                    remap,
+                );
                 last_units.append(&mut ret_value);
 
                 if let Some(store_result_in) = store_result_in {
@@ -119,20 +162,29 @@ impl Preprocessor {
                     Rc::clone(condition),
                     mangler,
                     Some(condition_ssa_name.clone()),
+                    Some(scope),
+                    remap,
                 );
 
                 last_units.append(&mut condition_value);
 
                 let result_ssa_name = mangler.rng();
 
-                let execute_value =
-                    self.run_internal(Rc::clone(execute), mangler, Some(result_ssa_name.clone()));
+                let execute_value = self.run_internal(
+                    Rc::clone(execute),
+                    mangler,
+                    Some(result_ssa_name.clone()),
+                    Some(scope),
+                    remap,
+                );
 
                 let alternative_value = if let Some(alternative) = alternative {
                     Some(self.run_internal(
                         Rc::clone(alternative),
                         mangler,
                         Some(result_ssa_name.clone()),
+                        Some(scope),
+                        remap,
                     ))
                 } else {
                     None
@@ -156,6 +208,8 @@ impl Preprocessor {
         &self,
         declaration: &parser::ast::declaration::Declaration,
         mangler: &Mangler,
+        scope: &Scope,
+        remap: Option<&Remapper>,
     ) -> Vec<LASTUnit> {
         let mut last_units = vec![];
 
@@ -168,6 +222,8 @@ impl Preprocessor {
             } => {
                 let identifier = self.fn_mangler.mangle(Cow::Borrowed(identifier));
 
+                let fn_scope = Scope::new();
+
                 let declaration = Declaration::FunctionDeclaration {
                     identifier,
                     parameters: parameters.clone(),
@@ -178,7 +234,7 @@ impl Preprocessor {
                     }
                     .iter()
                     .map(Rc::clone)
-                    .map(|unit| self.run_internal(unit, mangler, None))
+                    .map(|unit| self.run_internal(unit, mangler, None, Some(&fn_scope), remap))
                     .flatten()
                     .collect(),
                 };
@@ -192,21 +248,32 @@ impl Preprocessor {
             } => {
                 let ident_tmp = mangler.rng();
 
-                let expr_mangler = mangler.submangler();
                 let mut expression_result = match expression.as_ref() {
                     ASTUnit::Expression(expression) => {
-                        self.run_expression(expression, ident_tmp.clone(), &expr_mangler)
+                        self.run_expression(expression, ident_tmp.clone(), mangler, remap)
                     }
                     ASTUnit::Block(block) => {
-                        self.run_block(block, mangler, Some(ident_tmp.clone()))
+                        self.run_block(block, mangler, Some(ident_tmp.clone()), scope, remap)
                     }
-                    ASTUnit::Statement(statement) => {
-                        self.run_statement(statement, mangler, Some(ident_tmp.clone()))
-                    }
-                    ASTUnit::Declaration(_) => panic!("cannot use declaration as expression"),
+                    ASTUnit::Statement(statement) => self.run_statement(
+                        statement,
+                        mangler,
+                        Some(ident_tmp.clone()),
+                        scope,
+                        remap,
+                    ),
+                    ASTUnit::Declaration(_) => panic!("cannot use declaration in expression"),
                 };
 
                 last_units.append(&mut expression_result);
+
+                let identifier_new = scope.add_to_stack(identifier.clone());
+
+                if &identifier_new != identifier {
+                    if let Some(remaps) = remap {
+                        remaps.remap(identifier.clone(), identifier_new.clone());
+                    }
+                }
 
                 let declaration = Declaration::VariableDeclaration {
                     allocation: match keyword {
@@ -217,7 +284,7 @@ impl Preprocessor {
                             VariableAllocation::Stack
                         }
                     },
-                    identifier: identifier.clone(),
+                    identifier: identifier_new,
                     expression: Rc::new(Expression::Identifier(ident_tmp)),
                 };
 
@@ -235,12 +302,21 @@ impl Preprocessor {
         expression: &parser::ast::expression::Expression,
         identifier: String,
         mangler: &Mangler,
+        remap: Option<&Remapper>,
     ) -> Vec<LASTUnit> {
         let mut expression_units = vec![];
 
         let expression_result = match expression {
             parser::ast::expression::Expression::Identifier(ident) => {
-                Expression::Identifier(ident.clone())
+                Expression::Identifier(if let Some(remap) = remap {
+                    if let Some(remapped) = remap.get_remapped(ident) {
+                        remapped
+                    } else {
+                        ident.clone()
+                    }
+                } else {
+                    ident.clone()
+                })
             }
             parser::ast::expression::Expression::Literal(literal) => {
                 Expression::Literal(literal.clone())
@@ -259,7 +335,7 @@ impl Preprocessor {
                 // }
 
                 Expression::FunctionInvokation {
-                    name: function_name.clone(),
+                    name: self.fn_mangler.mangle(Cow::Borrowed(function_name)),
                     args,
                 }
             }
@@ -273,14 +349,14 @@ impl Preprocessor {
                     _ => unreachable!(),
                 };
                 let lhs_ssa_name = mangler.rng();
-                let mut lhs_expr = self.run_expression(lhs, lhs_ssa_name.clone(), mangler);
+                let mut lhs_expr = self.run_expression(lhs, lhs_ssa_name.clone(), mangler, remap);
 
                 let rhs = match right.as_ref() {
                     ASTUnit::Expression(expr) => expr,
                     _ => unreachable!(),
                 };
                 let rhs_ssa_name = mangler.rng();
-                let mut rhs_expr = self.run_expression(rhs, rhs_ssa_name.clone(), mangler);
+                let mut rhs_expr = self.run_expression(rhs, rhs_ssa_name.clone(), mangler, remap);
 
                 expression_units.append(&mut rhs_expr);
                 expression_units.append(&mut lhs_expr);
