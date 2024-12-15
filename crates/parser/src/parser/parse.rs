@@ -290,7 +290,7 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
 
                 units.push(Rc::new(unit));
             }
-            Token::Identifier(_ident) => {
+            Token::Identifier(_) | Token::Literal(_) => {
                 let (expression, size) = parsers::parse_expression(&tokens[pos..]);
                 pos += size;
 
@@ -302,9 +302,6 @@ pub fn parse(tokens: &[Token]) -> (ASTUnit, usize) {
                 };
 
                 units.push(Rc::new(unit));
-            }
-            Token::Literal(_literal) => {
-                pos += 1;
             }
             Token::Punctuation('{') => {
                 let (unit, size) = parsers::parse_expression(
