@@ -55,8 +55,15 @@ impl Preprocessor {
                 store_result_in.unwrap_or_else(|| mangler.rng()),
                 mangler,
             ),
-            ASTUnit::Statement(statement) => self.run_statement(statement, mangler, None),
-            _ => todo!(),
+            ASTUnit::Statement(statement) => {
+                self.run_statement(statement, mangler, store_result_in)
+            }
+            ASTUnit::Block(block) => block
+                .iter()
+                .map(Rc::clone)
+                .map(|unit| self.run_internal(unit, mangler, store_result_in.clone()))
+                .flatten()
+                .collect(),
         }
     }
 
@@ -92,6 +99,41 @@ impl Preprocessor {
                 } else {
                     LASTUnit::Statement(Statement::Return(Expression::Identifier(ret_ssa_name)))
                 }
+            }
+            parser::ast::statement::Statement::ControlFlow {
+                condition,
+                execute,
+                alternative,
+            } => {
+                let condition_ssa_name = mangler.rng();
+                let mut condition_value = self.run_internal(
+                    Rc::clone(condition),
+                    mangler,
+                    Some(condition_ssa_name.clone()),
+                );
+
+                last_units.append(&mut condition_value);
+
+                let result_ssa_name = mangler.rng();
+
+                let execute_value =
+                    self.run_internal(Rc::clone(execute), mangler, Some(result_ssa_name.clone()));
+
+                let alternative_value = if let Some(alternative) = alternative {
+                    Some(self.run_internal(
+                        Rc::clone(alternative),
+                        mangler,
+                        Some(result_ssa_name.clone()),
+                    ))
+                } else {
+                    None
+                };
+
+                LASTUnit::Statement(Statement::ControlFlow {
+                    condition: Rc::new(Expression::Identifier(condition_ssa_name)),
+                    execute: execute_value,
+                    alternative: alternative_value,
+                })
             }
             _ => todo!(),
         };

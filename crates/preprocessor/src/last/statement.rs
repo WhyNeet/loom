@@ -7,7 +7,7 @@ pub enum Statement {
     ControlFlow {
         condition: Rc<Expression>,
         execute: Vec<LASTUnit>,
-        alternative: Vec<LASTUnit>,
+        alternative: Option<Vec<LASTUnit>>,
     },
     Loop {
         condition: Rc<Expression>,
