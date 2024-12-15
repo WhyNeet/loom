@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
 use common::types::Type;
+use parser::ast::declaration::VariableDeclarationKeyword;
 
-use super::expression::Expression;
+use super::{expression::Expression, unit::LASTUnit};
 
 #[derive(Debug, PartialEq)]
 pub enum Declaration {
@@ -15,7 +16,7 @@ pub enum Declaration {
         identifier: String,
         parameters: Vec<(String, Type)>,
         return_type: Type,
-        expression: Rc<Expression>,
+        body: Vec<LASTUnit>,
     },
 }
 
@@ -23,4 +24,13 @@ pub enum Declaration {
 pub enum VariableAllocation {
     SSA,
     Stack,
+}
+
+impl From<VariableDeclarationKeyword> for VariableAllocation {
+    fn from(value: VariableDeclarationKeyword) -> Self {
+        match value {
+            VariableDeclarationKeyword::Const => Self::SSA,
+            VariableDeclarationKeyword::Let => Self::Stack,
+        }
+    }
 }

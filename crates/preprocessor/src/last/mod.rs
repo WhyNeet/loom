@@ -6,16 +6,17 @@ pub mod unit;
 
 use unit::LASTUnit;
 
+#[derive(Debug)]
 pub struct LoweredAbstractSyntaxTree {
-    root: LASTUnit,
+    root: Vec<LASTUnit>,
 }
 
 impl LoweredAbstractSyntaxTree {
-    pub fn new(root: LASTUnit) -> Self {
+    pub fn new(root: Vec<LASTUnit>) -> Self {
         Self { root }
     }
 
-    pub fn root(&self) -> &LASTUnit {
+    pub fn root(&self) -> &Vec<LASTUnit> {
         &self.root
     }
 }
