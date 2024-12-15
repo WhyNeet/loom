@@ -58,13 +58,22 @@ impl Preprocessor {
             ASTUnit::Statement(statement) => {
                 self.run_statement(statement, mangler, store_result_in)
             }
-            ASTUnit::Block(block) => block
-                .iter()
-                .map(Rc::clone)
-                .map(|unit| self.run_internal(unit, mangler, store_result_in.clone()))
-                .flatten()
-                .collect(),
+            ASTUnit::Block(block) => self.run_block(block, mangler, store_result_in),
         }
+    }
+
+    fn run_block(
+        &self,
+        block: &Vec<Rc<ASTUnit>>,
+        mangler: &Mangler,
+        store_result_in: Option<String>,
+    ) -> Vec<LASTUnit> {
+        block
+            .iter()
+            .map(Rc::clone)
+            .map(|unit| self.run_internal(unit, mangler, store_result_in.clone()))
+            .flatten()
+            .collect()
     }
 
     fn run_statement(
@@ -184,14 +193,18 @@ impl Preprocessor {
                 let ident_tmp = mangler.rng();
 
                 let expr_mangler = mangler.submangler();
-                let mut expression_result = self.run_expression(
-                    match expression.as_ref() {
-                        ASTUnit::Expression(expression) => expression,
-                        _ => unreachable!(),
-                    },
-                    ident_tmp.clone(),
-                    &expr_mangler,
-                );
+                let mut expression_result = match expression.as_ref() {
+                    ASTUnit::Expression(expression) => {
+                        self.run_expression(expression, ident_tmp.clone(), &expr_mangler)
+                    }
+                    ASTUnit::Block(block) => {
+                        self.run_block(block, mangler, Some(ident_tmp.clone()))
+                    }
+                    ASTUnit::Statement(statement) => {
+                        self.run_statement(statement, mangler, Some(ident_tmp.clone()))
+                    }
+                    ASTUnit::Declaration(_) => panic!("cannot use declaration as expression"),
+                };
 
                 last_units.append(&mut expression_result);
 
