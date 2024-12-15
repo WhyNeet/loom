@@ -1,6 +1,7 @@
 pub mod last;
+pub mod mangler;
 
-use std::rc::Rc;
+use std::{borrow::Cow, cell::RefCell, collections::HashMap, rc::Rc};
 
 use last::{
     declaration::{Declaration, VariableAllocation},
@@ -8,13 +9,18 @@ use last::{
     unit::LASTUnit,
     LoweredAbstractSyntaxTree,
 };
+use mangler::Mangler;
 use parser::ast::{unit::ASTUnit, AbstractSyntaxTree};
 
-pub struct Preprocessor {}
+pub struct Preprocessor {
+    fn_mangler: Mangler,
+}
 
 impl Preprocessor {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            fn_mangler: Mangler::new(),
+        }
     }
 
     pub fn run(&self, ast: AbstractSyntaxTree) -> LoweredAbstractSyntaxTree {
@@ -26,7 +32,7 @@ impl Preprocessor {
         let last_root = root
             .iter()
             .map(Rc::clone)
-            .map(|unit| self.run_internal(unit))
+            .map(|unit| self.run_internal(unit, &Mangler::new()))
             .flatten()
             .collect();
 
@@ -35,11 +41,11 @@ impl Preprocessor {
         last
     }
 
-    fn run_internal(&self, unit: Rc<ASTUnit>) -> Vec<LASTUnit> {
+    fn run_internal(&self, unit: Rc<ASTUnit>, mangler: &Mangler) -> Vec<LASTUnit> {
         match unit.as_ref() {
-            ASTUnit::Declaration(declaration) => self.run_declaration(declaration),
+            ASTUnit::Declaration(declaration) => self.run_declaration(declaration, mangler),
             ASTUnit::Expression(expression) => {
-                self.run_expression(expression, "expr_res".to_string())
+                self.run_expression(expression, mangler.rng(), mangler)
             }
             _ => todo!(),
         }
@@ -48,6 +54,7 @@ impl Preprocessor {
     fn run_declaration(
         &self,
         declaration: &parser::ast::declaration::Declaration,
+        mangler: &Mangler,
     ) -> Vec<LASTUnit> {
         let mut last_units = vec![];
 
@@ -58,8 +65,10 @@ impl Preprocessor {
                 return_type,
                 expression,
             } => {
+                let identifier = self.fn_mangler.mangle(Cow::Borrowed(identifier));
+
                 let declaration = Declaration::FunctionDeclaration {
-                    identifier: identifier.clone(),
+                    identifier,
                     parameters: parameters.clone(),
                     return_type: return_type.clone(),
                     body: match expression.as_ref() {
@@ -68,7 +77,7 @@ impl Preprocessor {
                     }
                     .iter()
                     .map(Rc::clone)
-                    .map(|unit| self.run_internal(unit))
+                    .map(|unit| self.run_internal(unit, mangler))
                     .flatten()
                     .collect(),
                 };
@@ -80,12 +89,16 @@ impl Preprocessor {
                 identifier,
                 expression,
             } => {
+                let ident_tmp = mangler.rng();
+
+                let expr_mangler = mangler.submangler();
                 let mut expression_result = self.run_expression(
                     match expression.as_ref() {
                         ASTUnit::Expression(expression) => expression,
                         _ => unreachable!(),
                     },
-                    format!("{identifier}_tmp"),
+                    ident_tmp.clone(),
+                    &expr_mangler,
                 );
 
                 last_units.append(&mut expression_result);
@@ -100,7 +113,7 @@ impl Preprocessor {
                         }
                     },
                     identifier: identifier.clone(),
-                    expression: Rc::new(Expression::Identifier(format!("{identifier}_tmp"))),
+                    expression: Rc::new(Expression::Identifier(ident_tmp)),
                 };
 
                 LASTUnit::Declaration(declaration)
@@ -116,6 +129,7 @@ impl Preprocessor {
         &self,
         expression: &parser::ast::expression::Expression,
         identifier: String,
+        mangler: &Mangler,
     ) -> Vec<LASTUnit> {
         let mut expression_units = vec![];
 
@@ -153,21 +167,22 @@ impl Preprocessor {
                     ASTUnit::Expression(expr) => expr,
                     _ => unreachable!(),
                 };
-                let mut lhs_expr = self.run_expression(lhs, "expr_lhs_res".to_string());
-
-                expression_units.append(&mut lhs_expr);
+                let lhs_ssa_name = mangler.rng();
+                let mut lhs_expr = self.run_expression(lhs, lhs_ssa_name.clone(), mangler);
 
                 let rhs = match right.as_ref() {
                     ASTUnit::Expression(expr) => expr,
                     _ => unreachable!(),
                 };
-                let mut rhs_expr = self.run_expression(rhs, "expr_rhs_res".to_string());
+                let rhs_ssa_name = mangler.rng();
+                let mut rhs_expr = self.run_expression(rhs, rhs_ssa_name.clone(), mangler);
 
                 expression_units.append(&mut rhs_expr);
+                expression_units.append(&mut lhs_expr);
 
                 Expression::BinaryExpression {
-                    left: Rc::new(Expression::Identifier("expr_lhs_res".to_string())),
-                    right: Rc::new(Expression::Identifier("expr_rhs_res".to_string())),
+                    left: Rc::new(Expression::Identifier(lhs_ssa_name)),
+                    right: Rc::new(Expression::Identifier(rhs_ssa_name)),
                     operation: match operation {
                         parser::ast::operation::Operation::Algebraic(_)
                         | parser::ast::operation::Operation::Logical(_) => operation.into(),
