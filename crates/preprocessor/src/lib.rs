@@ -6,6 +6,7 @@ use std::{borrow::Cow, cell::RefCell, collections::HashMap, rc::Rc};
 use last::{
     declaration::{Declaration, VariableAllocation},
     expression::Expression,
+    statement::Statement,
     unit::LASTUnit,
     LoweredAbstractSyntaxTree,
 };
@@ -32,7 +33,7 @@ impl Preprocessor {
         let last_root = root
             .iter()
             .map(Rc::clone)
-            .map(|unit| self.run_internal(unit, &Mangler::new()))
+            .map(|unit| self.run_internal(unit, &Mangler::new(), None))
             .flatten()
             .collect();
 
@@ -41,14 +42,63 @@ impl Preprocessor {
         last
     }
 
-    fn run_internal(&self, unit: Rc<ASTUnit>, mangler: &Mangler) -> Vec<LASTUnit> {
+    fn run_internal(
+        &self,
+        unit: Rc<ASTUnit>,
+        mangler: &Mangler,
+        store_result_in: Option<String>,
+    ) -> Vec<LASTUnit> {
         match unit.as_ref() {
             ASTUnit::Declaration(declaration) => self.run_declaration(declaration, mangler),
-            ASTUnit::Expression(expression) => {
-                self.run_expression(expression, mangler.rng(), mangler)
-            }
+            ASTUnit::Expression(expression) => self.run_expression(
+                expression,
+                store_result_in.unwrap_or_else(|| mangler.rng()),
+                mangler,
+            ),
+            ASTUnit::Statement(statement) => self.run_statement(statement, mangler, None),
             _ => todo!(),
         }
+    }
+
+    fn run_statement(
+        &self,
+        statement: &parser::ast::statement::Statement,
+        mangler: &Mangler,
+        store_result_in: Option<String>,
+    ) -> Vec<LASTUnit> {
+        let mut last_units = vec![];
+
+        let statement_unit = match statement {
+            parser::ast::statement::Statement::Return(ret) => {
+                let ret_ssa_name = mangler.rng();
+                let mut ret_value =
+                    self.run_internal(Rc::clone(ret), mangler, Some(ret_ssa_name.clone()));
+                last_units.append(&mut ret_value);
+
+                LASTUnit::Statement(Statement::Return(Expression::Identifier(ret_ssa_name)))
+            }
+            parser::ast::statement::Statement::ImplicitReturn(ret) => {
+                let ret_ssa_name = mangler.rng();
+                let mut ret_value =
+                    self.run_internal(Rc::clone(ret), mangler, Some(ret_ssa_name.clone()));
+                last_units.append(&mut ret_value);
+
+                if let Some(store_result_in) = store_result_in {
+                    LASTUnit::Declaration(Declaration::VariableDeclaration {
+                        allocation: VariableAllocation::SSA,
+                        identifier: store_result_in,
+                        expression: Rc::new(Expression::Identifier(ret_ssa_name)),
+                    })
+                } else {
+                    LASTUnit::Statement(Statement::Return(Expression::Identifier(ret_ssa_name)))
+                }
+            }
+            _ => todo!(),
+        };
+
+        last_units.push(statement_unit);
+
+        last_units
     }
 
     fn run_declaration(
@@ -77,7 +127,7 @@ impl Preprocessor {
                     }
                     .iter()
                     .map(Rc::clone)
-                    .map(|unit| self.run_internal(unit, mangler))
+                    .map(|unit| self.run_internal(unit, mangler, None))
                     .flatten()
                     .collect(),
                 };
