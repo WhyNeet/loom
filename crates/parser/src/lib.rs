@@ -265,7 +265,21 @@ impl Parser {
     fn parse_control_flow(&self, tokens: &[Token]) -> (ASTUnit, usize) {
         let mut offset = 0;
 
-        let (condition, size) = self.parse_expression(tokens);
+        let mut end = 0;
+
+        while end < tokens.len() && tokens[end] != Token::Keyword("else".to_string()) {
+            end += if tokens[end] == Token::Punctuation('{') {
+                traversal::traverse_till_root_par(
+                    &tokens[end..],
+                    (Token::Punctuation('{'), Token::Punctuation('}')),
+                )
+                .unwrap_or(tokens.len() - end)
+            } else {
+                1
+            };
+        }
+
+        let (condition, size) = self.parse_expression(&tokens[..end]);
 
         offset += size;
 
@@ -363,7 +377,7 @@ impl Parser {
                         }
 
                         let operation = Operation::from_str(op).unwrap();
-                        if acc.is_none() || acc.as_ref().unwrap().1.ge(&operation) {
+                        if acc.is_none() || acc.as_ref().unwrap().1.gt(&operation) {
                             Some((idx, operation))
                         } else {
                             acc
