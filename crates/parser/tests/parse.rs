@@ -1,5 +1,5 @@
 use ::lexer::lexer::Lexer;
-use parser::parser;
+use parser::Parser;
 
 #[test]
 pub fn parser_works() {
@@ -25,7 +25,7 @@ pub fn parser_works() {
 
     let tokens = Lexer::new().run(input);
 
-    let (ast, _) = parser::parse(&tokens);
+    let ast = Parser::new().run(&tokens);
 
     println!("ast: {ast:?}");
 }
