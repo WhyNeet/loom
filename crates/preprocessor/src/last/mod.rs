@@ -4,19 +4,21 @@ pub mod operation;
 pub mod statement;
 pub mod unit;
 
+use std::rc::Rc;
+
 use unit::LASTUnit;
 
 #[derive(Debug)]
 pub struct LoweredAbstractSyntaxTree {
-    root: Vec<LASTUnit>,
+    root: Vec<Rc<LASTUnit>>,
 }
 
 impl LoweredAbstractSyntaxTree {
-    pub fn new(root: Vec<LASTUnit>) -> Self {
+    pub fn new(root: Vec<Rc<LASTUnit>>) -> Self {
         Self { root }
     }
 
-    pub fn root(&self) -> &Vec<LASTUnit> {
+    pub fn root(&self) -> &Vec<Rc<LASTUnit>> {
         &self.root
     }
 }

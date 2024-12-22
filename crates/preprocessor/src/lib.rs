@@ -39,6 +39,7 @@ impl Preprocessor {
             .map(Rc::clone)
             .map(|unit| self.run_internal(unit, &Mangler::new(), None, Some(&root_scope), None))
             .flatten()
+            .map(Rc::new)
             .collect();
 
         let last = LoweredAbstractSyntaxTree::new(last_root);
