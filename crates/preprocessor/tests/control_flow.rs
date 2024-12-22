@@ -66,28 +66,28 @@ pub fn control_flow_works() {
         &LASTUnit::Statement(Statement::ControlFlow {
             condition: Rc::new(Expression::Identifier("0".to_string())),
             execute: vec![
-                LASTUnit::Declaration(Declaration::VariableDeclaration {
+                Rc::new(LASTUnit::Declaration(Declaration::VariableDeclaration {
                     allocation: VariableAllocation::SSA,
                     identifier: "4".to_string(),
                     expression: Rc::new(Expression::Literal(Literal::Int32(1)))
-                }),
-                LASTUnit::Declaration(Declaration::VariableDeclaration {
+                })),
+                Rc::new(LASTUnit::Declaration(Declaration::VariableDeclaration {
                     allocation: VariableAllocation::SSA,
                     identifier: "3".to_string(),
                     expression: Rc::new(Expression::Identifier("4".to_string()))
-                })
+                }))
             ],
             alternative: Some(vec![
-                LASTUnit::Declaration(Declaration::VariableDeclaration {
+                Rc::new(LASTUnit::Declaration(Declaration::VariableDeclaration {
                     allocation: VariableAllocation::SSA,
                     identifier: "5".to_string(),
                     expression: Rc::new(Expression::Literal(Literal::Int32(2)))
-                }),
-                LASTUnit::Declaration(Declaration::VariableDeclaration {
+                })),
+                Rc::new(LASTUnit::Declaration(Declaration::VariableDeclaration {
                     allocation: VariableAllocation::SSA,
                     identifier: "3".to_string(),
                     expression: Rc::new(Expression::Identifier("5".to_string()))
-                })
+                }))
             ])
         })
     );

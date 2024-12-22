@@ -39,7 +39,6 @@ impl Preprocessor {
             .map(Rc::clone)
             .map(|unit| self.run_internal(unit, &Mangler::new(), None, Some(&root_scope), None))
             .flatten()
-            .map(Rc::new)
             .collect();
 
         let last = LoweredAbstractSyntaxTree::new(last_root);
@@ -54,7 +53,7 @@ impl Preprocessor {
         store_result_in: Option<String>,
         scope: Option<&Scope>,
         remap: Option<&Remapper>,
-    ) -> Vec<LASTUnit> {
+    ) -> Vec<Rc<LASTUnit>> {
         match unit.as_ref() {
             ASTUnit::Declaration(declaration) => {
                 self.run_declaration(declaration, mangler, scope.unwrap_or(&Scope::new()), remap)
@@ -89,7 +88,7 @@ impl Preprocessor {
         store_result_in: Option<String>,
         scope: &Scope,
         remap: Option<&Remapper>,
-    ) -> Vec<LASTUnit> {
+    ) -> Vec<Rc<LASTUnit>> {
         let remaps_new = Remapper::new();
 
         block
@@ -115,7 +114,7 @@ impl Preprocessor {
         store_result_in: Option<String>,
         scope: &Scope,
         remap: Option<&Remapper>,
-    ) -> Vec<LASTUnit> {
+    ) -> Vec<Rc<LASTUnit>> {
         let mut last_units = vec![];
 
         let statement_unit = match statement {
@@ -130,7 +129,9 @@ impl Preprocessor {
                 );
                 last_units.append(&mut ret_value);
 
-                LASTUnit::Statement(Statement::Return(Expression::Identifier(ret_ssa_name)))
+                LASTUnit::Statement(Statement::Return(Rc::new(Expression::Identifier(
+                    ret_ssa_name,
+                ))))
             }
             parser::ast::statement::Statement::ImplicitReturn(ret) => {
                 let ret_ssa_name = mangler.rng();
@@ -150,7 +151,9 @@ impl Preprocessor {
                         expression: Rc::new(Expression::Identifier(ret_ssa_name)),
                     })
                 } else {
-                    LASTUnit::Statement(Statement::Return(Expression::Identifier(ret_ssa_name)))
+                    LASTUnit::Statement(Statement::Return(Rc::new(Expression::Identifier(
+                        ret_ssa_name,
+                    ))))
                 }
             }
             parser::ast::statement::Statement::ControlFlow {
@@ -200,7 +203,7 @@ impl Preprocessor {
             _ => todo!(),
         };
 
-        last_units.push(statement_unit);
+        last_units.push(Rc::new(statement_unit));
 
         last_units
     }
@@ -211,7 +214,7 @@ impl Preprocessor {
         mangler: &Mangler,
         scope: &Scope,
         remap: Option<&Remapper>,
-    ) -> Vec<LASTUnit> {
+    ) -> Vec<Rc<LASTUnit>> {
         let mut last_units = vec![];
 
         let declaration_unit = match declaration {
@@ -293,7 +296,7 @@ impl Preprocessor {
             }
         };
 
-        last_units.push(declaration_unit);
+        last_units.push(Rc::new(declaration_unit));
 
         last_units
     }
@@ -304,7 +307,7 @@ impl Preprocessor {
         identifier: String,
         mangler: &Mangler,
         remap: Option<&Remapper>,
-    ) -> Vec<LASTUnit> {
+    ) -> Vec<Rc<LASTUnit>> {
         let mut expression_units = vec![];
 
         let expression_result = match expression {
@@ -380,7 +383,7 @@ impl Preprocessor {
             expression: Rc::new(expression_result),
         });
 
-        expression_units.push(result_ssa);
+        expression_units.push(Rc::new(result_ssa));
 
         expression_units
     }

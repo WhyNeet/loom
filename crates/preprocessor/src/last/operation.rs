@@ -1,4 +1,4 @@
-use parser::ast::operation::{AlgebraicOperation, LogicalOperation};
+pub use parser::ast::operation::{AlgebraicOperation, LogicalOperation};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Operation {

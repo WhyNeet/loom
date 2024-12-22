@@ -184,28 +184,28 @@ pub fn control_flow_as_expression_works() {
         &LASTUnit::Statement(Statement::ControlFlow {
             condition: Rc::new(Expression::Identifier("1".to_string())),
             execute: vec![
-                LASTUnit::Declaration(Declaration::VariableDeclaration {
+                Rc::new(LASTUnit::Declaration(Declaration::VariableDeclaration {
                     allocation: VariableAllocation::SSA,
                     identifier: "4".to_string(),
                     expression: Rc::new(Expression::Identifier("b".to_string()))
-                }),
-                LASTUnit::Declaration(Declaration::VariableDeclaration {
+                })),
+                Rc::new(LASTUnit::Declaration(Declaration::VariableDeclaration {
                     allocation: VariableAllocation::SSA,
                     identifier: "0".to_string(),
                     expression: Rc::new(Expression::Identifier("4".to_string()))
-                })
+                }))
             ],
             alternative: Some(vec![
-                LASTUnit::Declaration(Declaration::VariableDeclaration {
+                Rc::new(LASTUnit::Declaration(Declaration::VariableDeclaration {
                     allocation: VariableAllocation::SSA,
                     identifier: "5".to_string(),
                     expression: Rc::new(Expression::Identifier("c".to_string()))
-                }),
-                LASTUnit::Declaration(Declaration::VariableDeclaration {
+                })),
+                Rc::new(LASTUnit::Declaration(Declaration::VariableDeclaration {
                     allocation: VariableAllocation::SSA,
                     identifier: "0".to_string(),
                     expression: Rc::new(Expression::Identifier("5".to_string()))
-                })
+                }))
             ])
         })
     );

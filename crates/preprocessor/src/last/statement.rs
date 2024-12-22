@@ -6,12 +6,12 @@ use super::{expression::Expression, unit::LASTUnit};
 pub enum Statement {
     ControlFlow {
         condition: Rc<Expression>,
-        execute: Vec<LASTUnit>,
-        alternative: Option<Vec<LASTUnit>>,
+        execute: Vec<Rc<LASTUnit>>,
+        alternative: Option<Vec<Rc<LASTUnit>>>,
     },
     Loop {
         condition: Rc<Expression>,
-        body: Vec<LASTUnit>,
+        body: Vec<Rc<LASTUnit>>,
     },
-    Return(Expression),
+    Return(Rc<Expression>),
 }

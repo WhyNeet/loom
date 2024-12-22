@@ -16,7 +16,7 @@ pub enum Declaration {
         identifier: String,
         parameters: Vec<(String, Type)>,
         return_type: Type,
-        body: Vec<LASTUnit>,
+        body: Vec<Rc<LASTUnit>>,
     },
 }
 

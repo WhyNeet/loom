@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use parser::ast::literal::Literal;
+pub use parser::ast::literal::Literal;
 
 use super::operation::Operation;
 

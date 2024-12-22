@@ -72,24 +72,24 @@ pub fn function_declaration_works() {
     };
 
     assert_eq!(
-        root[0],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[0].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "2".to_string(),
             expression: Rc::new(Expression::Identifier("y".to_string()))
         })
     );
     assert_eq!(
-        root[1],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[1].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "1".to_string(),
             expression: Rc::new(Expression::Identifier("x".to_string()))
         })
     );
     assert_eq!(
-        root[2],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[2].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "0".to_string(),
             expression: Rc::new(Expression::BinaryExpression {
@@ -100,8 +100,10 @@ pub fn function_declaration_works() {
         })
     );
     assert_eq!(
-        root[3],
-        LASTUnit::Statement(Statement::Return(Expression::Identifier("0".to_string())))
+        root[3].as_ref(),
+        &LASTUnit::Statement(Statement::Return(Rc::new(Expression::Identifier(
+            "0".to_string()
+        ))))
     )
 }
 
