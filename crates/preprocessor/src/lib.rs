@@ -168,7 +168,7 @@ impl Preprocessor {
 
                 last_units.append(&mut condition_value);
 
-                let result_ssa_name = mangler.rng();
+                let result_ssa_name = store_result_in.unwrap_or_else(|| mangler.rng());
 
                 let execute_value = self.run_internal(
                     Rc::clone(execute),
