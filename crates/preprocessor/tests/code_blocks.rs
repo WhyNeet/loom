@@ -38,56 +38,56 @@ pub fn code_blocks_work() {
     let root = last.root();
 
     assert_eq!(
-        root[0],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[0].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "0".to_string(),
             expression: Rc::new(Expression::Literal(parser::ast::literal::Literal::Int32(1)))
         })
     );
     assert_eq!(
-        root[1],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[1].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::Stack,
             identifier: "b".to_string(),
             expression: Rc::new(Expression::Identifier("0".to_string()))
         })
     );
     assert_eq!(
-        root[2],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[2].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "1".to_string(),
             expression: Rc::new(Expression::Literal(parser::ast::literal::Literal::Int32(2)))
         })
     );
     assert_eq!(
-        root[3],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[3].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::Stack,
             identifier: "b0".to_string(),
             expression: Rc::new(Expression::Identifier("1".to_string()))
         })
     );
     assert_eq!(
-        root[4],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[4].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "4".to_string(),
             expression: Rc::new(Expression::Identifier("c".to_string()))
         })
     );
     assert_eq!(
-        root[5],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[5].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "3".to_string(),
             expression: Rc::new(Expression::Identifier("b0".to_string()))
         })
     );
     assert_eq!(
-        root[6],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[6].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "2".to_string(),
             expression: Rc::new(Expression::BinaryExpression {
@@ -98,32 +98,32 @@ pub fn code_blocks_work() {
         })
     );
     assert_eq!(
-        root[7],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[7].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "0".to_string(),
             expression: Rc::new(Expression::Identifier("2".to_string()))
         })
     );
     assert_eq!(
-        root[8],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[8].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::Stack,
             identifier: "a".to_string(),
             expression: Rc::new(Expression::Identifier("0".to_string()))
         })
     );
     assert_eq!(
-        root[9],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[9].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "0".to_string(),
             expression: Rc::new(Expression::Identifier("b".to_string()))
         })
     );
     assert_eq!(
-        root[10],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[10].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::Stack,
             identifier: "c".to_string(),
             expression: Rc::new(Expression::Identifier("0".to_string()))
@@ -149,8 +149,8 @@ pub fn control_flow_as_expression_works() {
     let root = last.root();
 
     assert_eq!(
-        root[0],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[0].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "3".to_string(),
             expression: Rc::new(Expression::Identifier("c".to_string()))
@@ -158,8 +158,8 @@ pub fn control_flow_as_expression_works() {
     );
 
     assert_eq!(
-        root[1],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[1].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "2".to_string(),
             expression: Rc::new(Expression::Identifier("b".to_string()))
@@ -167,8 +167,8 @@ pub fn control_flow_as_expression_works() {
     );
 
     assert_eq!(
-        root[2],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[2].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "1".to_string(),
             expression: Rc::new(Expression::BinaryExpression {
@@ -180,8 +180,8 @@ pub fn control_flow_as_expression_works() {
     );
 
     assert_eq!(
-        root[3],
-        LASTUnit::Statement(Statement::ControlFlow {
+        root[3].as_ref(),
+        &LASTUnit::Statement(Statement::ControlFlow {
             condition: Rc::new(Expression::Identifier("1".to_string())),
             execute: vec![
                 LASTUnit::Declaration(Declaration::VariableDeclaration {
@@ -211,8 +211,8 @@ pub fn control_flow_as_expression_works() {
     );
 
     assert_eq!(
-        root[4],
-        LASTUnit::Declaration(Declaration::VariableDeclaration {
+        root[4].as_ref(),
+        &LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::Stack,
             identifier: "a".to_string(),
             expression: Rc::new(Expression::Identifier("0".to_string()))

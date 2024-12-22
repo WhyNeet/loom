@@ -31,7 +31,7 @@ pub fn function_declaration_works() {
     let root = last.root();
 
     assert_eq!(
-        mem::discriminant(&root[0]),
+        mem::discriminant(root[0].as_ref()),
         mem::discriminant(&LASTUnit::Declaration(Declaration::VariableDeclaration {
             allocation: VariableAllocation::SSA,
             identifier: "".to_string(),
@@ -39,7 +39,7 @@ pub fn function_declaration_works() {
         }))
     );
 
-    let root = match &root[0] {
+    let root = match root[0].as_ref() {
         LASTUnit::Declaration(decl) => {
             assert_eq!(
                 mem::discriminant(decl),
