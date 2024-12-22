@@ -70,17 +70,13 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
     }
 
     pub fn generate_from_ast(&'ctx self, ast: Vec<Rc<LASTUnit>>) {
-        self.internal_generate_from_ast(ast, None);
+        self.internal_generate_from_ast(ast);
         if self.is_void {
             self.builder.build_return(None).unwrap();
         }
     }
 
-    pub fn internal_generate_from_ast(
-        &'ctx self,
-        ast: Vec<Rc<LASTUnit>>,
-        store_return: Option<&str>,
-    ) {
+    pub fn internal_generate_from_ast(&'ctx self, ast: Vec<Rc<LASTUnit>>) {
         for idx in 0..ast.len() {
             let unit = unsafe { (&ast[idx] as *const Rc<LASTUnit>).as_ref().unwrap() };
 
@@ -106,17 +102,7 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                     }
                 },
                 LASTUnit::Expression(expr) => {
-                    self.expr_gen.generate_from_ast(
-                        &format!(
-                            "{}",
-                            if let Some(store_in) = store_return {
-                                store_in
-                            } else {
-                                "expr_tmp"
-                            }
-                        ),
-                        &expr,
-                    );
+                    self.expr_gen.generate_from_ast(&expr, None);
                 }
                 LASTUnit::Statement(stmt) => {
                     let remaining_instruct = ast

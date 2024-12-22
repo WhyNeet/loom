@@ -44,8 +44,8 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
 
     pub fn generate_from_ast(
         &self,
-        store_in: &str,
         expression: &'ctx Expression,
+        store_in: Option<&str>,
     ) -> Option<BasicValueEnum<'ctx>> {
         match expression {
             Expression::Literal(literal) => {
@@ -67,8 +67,16 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
             Expression::FunctionInvokation { args, name } => {
                 let params = args
                     .into_iter()
-                    .enumerate()
-                    .map(|(idx, param)| self.generate_from_ast(&format!("{idx}"), param).unwrap())
+                    .map(|param| {
+                        self.generate_from_ast(
+                            param,
+                            match param {
+                                Expression::Identifier(ident) => Some(ident),
+                                _ => unreachable!(),
+                            },
+                        )
+                        .unwrap()
+                    })
                     .map(|param| param.into())
                     .collect::<Vec<BasicMetadataValueEnum<'ctx>>>();
 
@@ -77,7 +85,7 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                     .build_call(
                         *self.function_stack.borrow().get(name).unwrap(),
                         &params,
-                        store_in,
+                        store_in.unwrap(),
                     )
                     .unwrap();
 
@@ -90,42 +98,59 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
             } => {
                 let op_res = match operation {
                     Operation::Algebraic(alg) => {
-                        let left_store_in = format!("{store_in}_lhs");
-                        let right_store_in = format!("{store_in}_rhs");
-
                         let lhs = self
-                            .generate_from_ast(&left_store_in, left)
+                            .generate_from_ast(
+                                left,
+                                match left.as_ref() {
+                                    Expression::Identifier(ident) => Some(ident),
+                                    _ => unreachable!(),
+                                },
+                            )
                             .unwrap()
                             .into_int_value();
 
                         let rhs = self
-                            .generate_from_ast(&right_store_in, right)
+                            .generate_from_ast(
+                                right,
+                                match right.as_ref() {
+                                    Expression::Identifier(ident) => Some(ident),
+                                    _ => unreachable!(),
+                                },
+                            )
                             .unwrap()
                             .into_int_value();
                         Some(match alg {
                             AlgebraicOperation::Addition => {
-                                self.builder.build_int_add(lhs, rhs, store_in)
+                                self.builder.build_int_add(lhs, rhs, store_in.unwrap())
                             }
                             AlgebraicOperation::Division => {
-                                self.builder.build_int_signed_div(lhs, rhs, store_in)
+                                self.builder
+                                    .build_int_signed_div(lhs, rhs, store_in.unwrap())
                             }
                             AlgebraicOperation::Multiplication => {
-                                self.builder.build_int_mul(lhs, rhs, store_in)
+                                self.builder.build_int_mul(lhs, rhs, store_in.unwrap())
                             }
                             AlgebraicOperation::Subtraction => {
-                                self.builder.build_int_sub(lhs, rhs, store_in)
+                                self.builder.build_int_sub(lhs, rhs, store_in.unwrap())
                             }
                         })
                     }
                     Operation::Assignment => {
-                        let identifier = match &**left {
+                        let identifier = match left.as_ref() {
                             Expression::Identifier(ident) => ident,
                             _ => unreachable!(),
                         };
 
-                        let right_store_in = format!("{store_in}_rhs");
-
-                        let rhs = self.generate_from_ast(&right_store_in, right).unwrap();
+                        let rhs = self
+                            .generate_from_ast(
+                                right,
+                                match right.as_ref() {
+                                    Expression::Identifier(ident) => Some(ident),
+                                    _ => unreachable!(),
+                                },
+                            )
+                            .unwrap()
+                            .into_int_value();
 
                         let lhs = self
                             .stack_frame
@@ -140,48 +165,75 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                     }
                     Operation::Logical(log) => match log {
                         LogicalOperation::Or => {
-                            let left_store_in = format!("{store_in}_lhs");
-                            let right_store_in = format!("{store_in}_rhs");
-
                             let lhs = self
-                                .generate_from_ast(&left_store_in, left)
+                                .generate_from_ast(
+                                    left,
+                                    match left.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(&right_store_in, right)
+                                .generate_from_ast(
+                                    right,
+                                    match right.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
-                            Some(self.builder.build_or(lhs, rhs, store_in))
+                            Some(self.builder.build_or(lhs, rhs, store_in.unwrap()))
                         }
                         LogicalOperation::And => {
-                            let left_store_in = format!("{store_in}_lhs");
-                            let right_store_in = format!("{store_in}_rhs");
-
                             let lhs = self
-                                .generate_from_ast(&left_store_in, left)
+                                .generate_from_ast(
+                                    left,
+                                    match left.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(&right_store_in, right)
+                                .generate_from_ast(
+                                    right,
+                                    match right.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
-                            Some(self.builder.build_and(lhs, rhs, store_in))
+                            Some(self.builder.build_and(lhs, rhs, store_in.unwrap()))
                         }
                         LogicalOperation::Equal => {
-                            let left_store_in = format!("{store_in}_lhs");
-                            let right_store_in = format!("{store_in}_rhs");
-
                             let lhs = self
-                                .generate_from_ast(&left_store_in, left)
+                                .generate_from_ast(
+                                    left,
+                                    match left.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(&right_store_in, right)
+                                .generate_from_ast(
+                                    right,
+                                    match right.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
@@ -189,20 +241,29 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                                 IntPredicate::EQ,
                                 lhs,
                                 rhs,
-                                store_in,
+                                store_in.unwrap(),
                             ))
                         }
                         LogicalOperation::Less => {
-                            let left_store_in = format!("{store_in}_lhs");
-                            let right_store_in = format!("{store_in}_rhs");
-
                             let lhs = self
-                                .generate_from_ast(&left_store_in, left)
+                                .generate_from_ast(
+                                    left,
+                                    match left.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(&right_store_in, right)
+                                .generate_from_ast(
+                                    right,
+                                    match right.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
@@ -210,20 +271,29 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                                 IntPredicate::SLT,
                                 lhs,
                                 rhs,
-                                store_in,
+                                store_in.unwrap(),
                             ))
                         }
                         LogicalOperation::Greater => {
-                            let left_store_in = format!("{store_in}_lhs");
-                            let right_store_in = format!("{store_in}_rhs");
-
                             let lhs = self
-                                .generate_from_ast(&left_store_in, left)
+                                .generate_from_ast(
+                                    left,
+                                    match left.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(&right_store_in, right)
+                                .generate_from_ast(
+                                    right,
+                                    match right.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
@@ -231,20 +301,29 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                                 IntPredicate::SGT,
                                 lhs,
                                 rhs,
-                                store_in,
+                                store_in.unwrap(),
                             ))
                         }
                         LogicalOperation::LessOrEqual => {
-                            let left_store_in = format!("{store_in}_lhs");
-                            let right_store_in = format!("{store_in}_rhs");
-
                             let lhs = self
-                                .generate_from_ast(&left_store_in, left)
+                                .generate_from_ast(
+                                    left,
+                                    match left.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(&right_store_in, right)
+                                .generate_from_ast(
+                                    right,
+                                    match right.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
@@ -252,20 +331,29 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                                 IntPredicate::SLE,
                                 lhs,
                                 rhs,
-                                store_in,
+                                store_in.unwrap(),
                             ))
                         }
                         LogicalOperation::GreaterOrEqual => {
-                            let left_store_in = format!("{store_in}_lhs");
-                            let right_store_in = format!("{store_in}_rhs");
-
                             let lhs = self
-                                .generate_from_ast(&left_store_in, left)
+                                .generate_from_ast(
+                                    left,
+                                    match left.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(&right_store_in, right)
+                                .generate_from_ast(
+                                    right,
+                                    match right.as_ref() {
+                                        Expression::Identifier(ident) => Some(ident),
+                                        _ => unreachable!(),
+                                    },
+                                )
                                 .unwrap()
                                 .into_int_value();
 
@@ -273,7 +361,7 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                                 IntPredicate::SGE,
                                 lhs,
                                 rhs,
-                                store_in,
+                                store_in.unwrap(),
                             ))
                         }
                     },

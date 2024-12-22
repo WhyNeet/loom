@@ -38,9 +38,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
     pub fn generate_from_ast(&self, stmt: &'ctx Statement, next: Vec<Rc<LASTUnit>>) {
         match stmt {
             Statement::Return(ret) => {
-                let ret_value = self
-                    .expression_gen
-                    .generate_from_ast("ret_res", ret.as_ref());
+                let ret_value = self.expression_gen.generate_from_ast(ret.as_ref(), None);
 
                 self.builder
                     .build_return(ret_value.as_ref().map(|val| val as &dyn BasicValue))
@@ -79,7 +77,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
         let body_block = self.context.append_basic_block(self.function, "body");
         self.builder.position_at_end(body_block);
 
-        self.fn_gen.internal_generate_from_ast(body, None);
+        self.fn_gen.internal_generate_from_ast(body);
         self.builder
             .build_unconditional_branch(header_block)
             .unwrap();
@@ -87,14 +85,15 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
         let exit_block = self.context.append_basic_block(self.function, "exit");
         self.builder.position_at_end(exit_block);
 
-        self.fn_gen.internal_generate_from_ast(next, None);
+        self.fn_gen.internal_generate_from_ast(next);
 
         self.builder.position_at_end(header_block);
         let cmp = self
             .expression_gen
-            .generate_from_ast("cmp_res", unsafe {
-                (condition.as_ref() as *const Expression).as_ref().unwrap()
-            })
+            .generate_from_ast(
+                unsafe { (condition.as_ref() as *const Expression).as_ref().unwrap() },
+                None,
+            )
             .unwrap()
             .into_int_value();
 
@@ -122,9 +121,10 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
     ) {
         let cmp = self
             .expression_gen
-            .generate_from_ast("cf_cr", unsafe {
-                (condition.as_ref() as *const Expression).as_ref().unwrap()
-            })
+            .generate_from_ast(
+                unsafe { (condition.as_ref() as *const Expression).as_ref().unwrap() },
+                None,
+            )
             .unwrap()
             .into_int_value();
 
@@ -141,7 +141,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
             self.builder.position_at_end(continue_block);
 
             let next_ast = next.iter().map(Rc::clone).collect();
-            self.fn_gen.internal_generate_from_ast(next_ast, None);
+            self.fn_gen.internal_generate_from_ast(next_ast);
 
             continue_block
         };
@@ -151,7 +151,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
         self.builder.position_at_end(execute_block);
 
         let execute_ast = execute;
-        self.fn_gen.internal_generate_from_ast(execute_ast, None);
+        self.fn_gen.internal_generate_from_ast(execute_ast);
 
         self.builder
             .build_unconditional_branch(continue_block)
@@ -164,8 +164,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                 .append_basic_block(self.function, "alternative");
             self.builder.position_at_end(alternative_block);
 
-            self.fn_gen
-                .internal_generate_from_ast(alternative.clone(), None);
+            self.fn_gen.internal_generate_from_ast(alternative.clone());
             self.builder
                 .build_unconditional_branch(continue_block)
                 .unwrap();

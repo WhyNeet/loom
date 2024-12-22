@@ -53,7 +53,13 @@ impl<'ctx> LLVMVariableGenerator<'ctx> {
             Rc::clone(&self.ssa),
             Rc::clone(&self.function_stack),
         )
-        .generate_from_ast(&format!("{identifier}_tmp"), expression)
+        .generate_from_ast(
+            expression,
+            match expression {
+                Expression::Identifier(ident) => Some(ident),
+                _ => Some(identifier),
+            },
+        )
         .unwrap();
 
         if *allocation == VariableAllocation::Stack {

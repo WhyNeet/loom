@@ -7,6 +7,7 @@ use inkwell::{
 };
 use preprocessor::last::expression::Literal;
 
+#[derive(Debug)]
 pub struct VariableData<'ctx> {
     ptr: PointerValue<'ctx>,
     ty: BasicTypeEnum<'ctx>,
