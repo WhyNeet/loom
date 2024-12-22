@@ -58,7 +58,7 @@ version = "0.1.0"
 dependencies = [
  "common",
  "inkwell",
- "parser",
+ "preprocessor",
 ]
 
 [[package]]
@@ -162,6 +162,7 @@ dependencies = [
  "ir",
  "lexer",
  "parser",
+ "preprocessor",
 ]
 
 [[package]]
