@@ -7,12 +7,13 @@ use std::{borrow::Cow, collections::HashMap, rc::Rc};
 use last::{
     declaration::{Declaration, VariableAllocation},
     expression::Expression,
+    operation::Operation,
     statement::Statement,
     unit::LASTUnit,
     LoweredAbstractSyntaxTree,
 };
 use mangler::Mangler;
-use parser::ast::{unit::ASTUnit, AbstractSyntaxTree};
+use parser::ast::{operation::AssignmentOperation, unit::ASTUnit, AbstractSyntaxTree};
 use scope::{Remapper, Scope};
 
 pub struct Preprocessor {
@@ -60,7 +61,15 @@ impl Preprocessor {
             }
             ASTUnit::Expression(expression) => self.run_expression(
                 expression,
-                store_result_in.unwrap_or_else(|| mangler.rng()),
+                match expression {
+                    parser::ast::expression::Expression::BinaryExpression { operation, .. } => {
+                        match operation {
+                            parser::ast::operation::Operation::Assignment(_) => None,
+                            _ => Some(store_result_in.unwrap_or_else(|| mangler.rng())),
+                        }
+                    }
+                    _ => Some(store_result_in.unwrap_or_else(|| mangler.rng())),
+                },
                 mangler,
                 remap,
             ),
@@ -200,7 +209,31 @@ impl Preprocessor {
                     alternative: alternative_value,
                 })
             }
-            _ => todo!(),
+            parser::ast::statement::Statement::Loop(stmt) => {
+                let (condition, body) = match stmt {
+                    parser::ast::statement::LoopStatement::While { condition, execute } => {
+                        (condition, execute)
+                    }
+                };
+
+                let condition_ssa_name = mangler.rng();
+                let mut condition_value = self.run_internal(
+                    Rc::clone(condition),
+                    mangler,
+                    Some(condition_ssa_name.clone()),
+                    Some(scope),
+                    remap,
+                );
+
+                last_units.append(&mut condition_value);
+
+                let body = self.run_internal(Rc::clone(body), mangler, None, Some(scope), remap);
+
+                LASTUnit::Statement(Statement::Loop {
+                    condition: Rc::new(Expression::Identifier(condition_ssa_name)),
+                    body,
+                })
+            }
         };
 
         last_units.push(Rc::new(statement_unit));
@@ -254,7 +287,7 @@ impl Preprocessor {
 
                 let mut expression_result = match expression.as_ref() {
                     ASTUnit::Expression(expression) => {
-                        self.run_expression(expression, ident_tmp.clone(), mangler, remap)
+                        self.run_expression(expression, Some(ident_tmp.clone()), mangler, remap)
                     }
                     ASTUnit::Block(block) => {
                         self.run_block(block, mangler, Some(ident_tmp.clone()), scope, remap)
@@ -304,7 +337,7 @@ impl Preprocessor {
     fn run_expression(
         &self,
         expression: &parser::ast::expression::Expression,
-        identifier: String,
+        identifier: Option<String>,
         mangler: &Mangler,
         remap: Option<&Remapper>,
     ) -> Vec<Rc<LASTUnit>> {
@@ -347,43 +380,74 @@ impl Preprocessor {
                 left,
                 right,
                 operation,
-            } => {
-                let lhs = match left.as_ref() {
-                    ASTUnit::Expression(expr) => expr,
-                    _ => unreachable!(),
-                };
-                let lhs_ssa_name = mangler.rng();
-                let mut lhs_expr = self.run_expression(lhs, lhs_ssa_name.clone(), mangler, remap);
+            } => match operation {
+                parser::ast::operation::Operation::Assignment(assign) => {
+                    let rhs = match right.as_ref() {
+                        ASTUnit::Expression(expr) => expr,
+                        _ => unreachable!(),
+                    };
+                    let rhs_ssa_name = mangler.rng();
+                    let mut rhs_expr =
+                        self.run_expression(rhs, Some(rhs_ssa_name.clone()), mangler, remap);
 
-                let rhs = match right.as_ref() {
-                    ASTUnit::Expression(expr) => expr,
-                    _ => unreachable!(),
-                };
-                let rhs_ssa_name = mangler.rng();
-                let mut rhs_expr = self.run_expression(rhs, rhs_ssa_name.clone(), mangler, remap);
+                    expression_units.append(&mut rhs_expr);
 
-                expression_units.append(&mut rhs_expr);
-                expression_units.append(&mut lhs_expr);
-
-                Expression::BinaryExpression {
-                    left: Rc::new(Expression::Identifier(lhs_ssa_name)),
-                    right: Rc::new(Expression::Identifier(rhs_ssa_name)),
-                    operation: match operation {
-                        parser::ast::operation::Operation::Algebraic(_)
-                        | parser::ast::operation::Operation::Logical(_) => operation.into(),
-                        parser::ast::operation::Operation::Assignment(_) => todo!(),
-                    },
+                    Expression::BinaryExpression {
+                        left: Rc::new(Expression::Identifier(match left.as_ref() {
+                            ASTUnit::Expression(expr) => match expr {
+                                parser::ast::expression::Expression::Identifier(ident) => {
+                                    ident.to_string()
+                                }
+                                _ => unreachable!(),
+                            },
+                            _ => unreachable!(),
+                        })),
+                        right: Rc::new(Expression::Identifier(rhs_ssa_name)),
+                        operation: Operation::Assignment,
+                    }
                 }
-            }
+                _ => {
+                    let lhs = match left.as_ref() {
+                        ASTUnit::Expression(expr) => expr,
+                        _ => unreachable!(),
+                    };
+                    let lhs_ssa_name = mangler.rng();
+                    let mut lhs_expr =
+                        self.run_expression(lhs, Some(lhs_ssa_name.clone()), mangler, remap);
+
+                    let rhs = match right.as_ref() {
+                        ASTUnit::Expression(expr) => expr,
+                        _ => unreachable!(),
+                    };
+                    let rhs_ssa_name = mangler.rng();
+                    let mut rhs_expr =
+                        self.run_expression(rhs, Some(rhs_ssa_name.clone()), mangler, remap);
+
+                    expression_units.append(&mut rhs_expr);
+                    expression_units.append(&mut lhs_expr);
+
+                    Expression::BinaryExpression {
+                        left: Rc::new(Expression::Identifier(lhs_ssa_name)),
+                        right: Rc::new(Expression::Identifier(rhs_ssa_name)),
+                        operation: match operation {
+                            parser::ast::operation::Operation::Algebraic(_)
+                            | parser::ast::operation::Operation::Logical(_) => operation.into(),
+                            parser::ast::operation::Operation::Assignment(assign) => unreachable!(),
+                        },
+                    }
+                }
+            },
         };
 
-        let result_ssa = LASTUnit::Declaration(Declaration::VariableDeclaration {
-            allocation: VariableAllocation::SSA,
-            identifier,
-            expression: Rc::new(expression_result),
-        });
+        if let Some(identifier) = identifier {
+            let result_ssa = LASTUnit::Declaration(Declaration::VariableDeclaration {
+                allocation: VariableAllocation::SSA,
+                identifier,
+                expression: Rc::new(expression_result),
+            });
 
-        expression_units.push(Rc::new(result_ssa));
+            expression_units.push(Rc::new(result_ssa));
+        }
 
         expression_units
     }
