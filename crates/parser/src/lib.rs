@@ -287,23 +287,51 @@ impl Parser {
         let mut offset = 0;
 
         let mut end = 0;
-        // let mut last_block_start = 0;
+        let mut condition_end = 0;
 
-        while end < tokens.len() && tokens[end] != Token::Keyword("else".to_string()) {
-            end += if tokens[end] == Token::Punctuation('{') {
-                // last_block_start = end;
+        while end < tokens.len() {
+            if tokens[end] == Token::Keyword("else".to_string())
+                && tokens[end + 1] != Token::Keyword("if".to_string())
+            {
+                break;
+            }
 
-                traversal::traverse_till_root_par(
-                    &tokens[end..],
-                    (Token::Punctuation('{'), Token::Punctuation('}')),
-                )
-                .unwrap_or(tokens.len() - end)
-            } else {
-                1
-            };
+            let prev_end = end;
+
+            end += traversal::traverse_till_root_par(
+                &tokens[end..],
+                (Token::Punctuation('{'), Token::Punctuation('}')),
+            )
+            .map(|pos| pos + 1)
+            .unwrap_or(tokens.len() - end);
+
+            if end < tokens.len()
+                && tokens[end] == Token::Keyword("else".to_string())
+                && condition_end == 0
+            {
+                condition_end = tokens[prev_end..]
+                    .iter()
+                    .position(|token| {
+                        token
+                            .as_punctuation()
+                            .map(|token| token == '{')
+                            .unwrap_or(false)
+                    })
+                    .map(|pos| prev_end + pos)
+                    .unwrap_or(end);
+            }
         }
 
-        let (condition, size) = self.parse_expression(&tokens[..end]);
+        if end < tokens.len() && tokens[end] == Token::Keyword("else".to_string()) {
+            end += traversal::traverse_till_root_par(
+                &tokens[end..],
+                (Token::Punctuation('{'), Token::Punctuation('}')),
+            )
+            .map(|pos| pos + 1)
+            .unwrap_or(tokens.len() - end);
+        }
+
+        let (condition, size) = self.parse_expression(&tokens[..condition_end]);
 
         offset += size;
 
@@ -313,7 +341,8 @@ impl Parser {
                 (Token::Punctuation('{'), Token::Punctuation('}')),
             )
             .map(|pos| offset + pos + 1)
-            .unwrap_or(tokens.len())];
+            .unwrap_or(tokens.len())
+            .min(end)];
 
         let (block, size) = self.run_internal(block);
 
@@ -322,7 +351,9 @@ impl Parser {
         let alternative = if offset < tokens.len() {
             if tokens[offset] == Token::Keyword("else".to_string()) {
                 offset += 1;
-                let (alternative, size) = self.run_internal(&tokens[offset..]);
+
+                let (alternative, size) = self.run_internal(&tokens[offset..end]);
+
                 offset += size;
                 Some(Rc::new(alternative))
             } else {
