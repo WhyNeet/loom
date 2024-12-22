@@ -33,6 +33,7 @@ pub enum Keyword {
 pub enum RecognizableStructure {
     Block((usize, usize)),
     FunctionInvokation((usize, usize)),
+    Statement((usize, usize)),
 }
 
 pub struct Parser {}
@@ -91,7 +92,9 @@ impl Parser {
                             // expression size + ";"
                             pos += size + 1;
 
-                            units.push(Rc::new(expression));
+                            units.push(Rc::new(ASTUnit::Statement(Statement::Return(Rc::new(
+                                expression,
+                            )))));
                         }
                         Keyword::VariableDeclaration(keyword) => {
                             pos += 1;
@@ -102,14 +105,32 @@ impl Parser {
                             }
                             .clone();
 
-                            pos += 1;
+                            // ident + "="
+                            pos += 2;
 
-                            let expression = &tokens[pos..];
+                            let mut expression_end = pos;
 
-                            let (expression, size) = self.run_internal(expression);
+                            while expression_end < tokens.len()
+                                && tokens[expression_end] != Token::Punctuation(';')
+                            {
+                                expression_end +=
+                                    if tokens[expression_end] == Token::Punctuation('{') {
+                                        traversal::traverse_till_root_par(
+                                            &tokens[expression_end..],
+                                            (Token::Punctuation('{'), Token::Punctuation('}')),
+                                        )
+                                        .map(|pos| pos + 1)
+                                        .unwrap()
+                                    } else {
+                                        1
+                                    };
+                            }
 
-                            // expression size + ";"
-                            pos += size + 1;
+                            let expression = &tokens[pos..expression_end];
+
+                            let (expression, size) = self.parse_expression(expression);
+
+                            pos += size;
 
                             units.push(Rc::new(ASTUnit::Declaration(
                                 Declaration::VariableDeclaration {
@@ -266,9 +287,12 @@ impl Parser {
         let mut offset = 0;
 
         let mut end = 0;
+        // let mut last_block_start = 0;
 
         while end < tokens.len() && tokens[end] != Token::Keyword("else".to_string()) {
             end += if tokens[end] == Token::Punctuation('{') {
+                // last_block_start = end;
+
                 traversal::traverse_till_root_par(
                     &tokens[end..],
                     (Token::Punctuation('{'), Token::Punctuation('}')),
@@ -358,6 +382,11 @@ impl Parser {
                         }),
                         end - start,
                     );
+                }
+
+                RecognizableStructure::Statement((start, end)) => {
+                    let (unit, size) = self.run_internal(&expression[start..end]);
+                    return (unit, size);
                 }
             }
         }
@@ -487,6 +516,8 @@ impl Parser {
             let end = end.unwrap();
 
             Some(RecognizableStructure::FunctionInvokation((0, end)))
+        } else if input[0] == Token::Keyword("if".to_string()) {
+            Some(RecognizableStructure::Statement((0, input.len())))
         } else {
             None
         }
