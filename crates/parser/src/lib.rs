@@ -426,48 +426,55 @@ impl Parser {
         let mut braces_count = 0;
         let mut semicolon_count = 0;
 
-        let lowest_precedence: Option<(usize, Operation)> =
-            expression
-                .iter()
-                .enumerate()
-                .fold(None, |acc, (idx, tok)| match tok {
-                    Token::Operator(op) => {
-                        if parentheses_count != 0 || braces_count != 0 || semicolon_count != 0 {
-                            return acc;
-                        }
+        let mut lowest_precedence: Option<(usize, Operation)> = None;
 
-                        let operation = Operation::from_str(op).unwrap();
-                        if acc.is_none() || acc.as_ref().unwrap().1.gt(&operation) {
-                            Some((idx, operation))
-                        } else {
-                            acc
-                        }
+        for idx in 0..(expression.len() - 1) {
+            if (mem::discriminant(&expression[idx])
+                == mem::discriminant(&Token::Literal(lexer::lexer::token::Literal::Number(
+                    "0".to_string(),
+                )))
+                || mem::discriminant(&expression[idx])
+                    == mem::discriminant(&Token::Identifier("".to_string())))
+                && mem::discriminant(&expression[idx + 1])
+                    != mem::discriminant(&Token::Operator("+".to_string()))
+            {
+                break;
+            }
+
+            match &expression[idx] {
+                Token::Operator(op) => {
+                    if parentheses_count != 0 || braces_count != 0 || semicolon_count != 0 {
+                        continue;
                     }
-                    Token::Punctuation('(') => {
-                        parentheses_count += 1;
-                        acc
+
+                    let operation = Operation::from_str(op).unwrap();
+                    if lowest_precedence.is_none()
+                        || lowest_precedence.as_ref().unwrap().1.gt(&operation)
+                    {
+                        lowest_precedence = Some((idx, operation));
                     }
-                    Token::Punctuation(')') => {
-                        parentheses_count -= 1;
-                        acc
+                }
+                Token::Punctuation('(') => {
+                    parentheses_count += 1;
+                }
+                Token::Punctuation(')') => {
+                    parentheses_count -= 1;
+                }
+                Token::Punctuation('{') => {
+                    braces_count += 1;
+                }
+                Token::Punctuation('}') => {
+                    braces_count -= 1;
+                }
+                Token::Punctuation(';') => {
+                    if parentheses_count != 0 || braces_count != 0 {
+                        continue;
                     }
-                    Token::Punctuation('{') => {
-                        braces_count += 1;
-                        acc
-                    }
-                    Token::Punctuation('}') => {
-                        braces_count -= 1;
-                        acc
-                    }
-                    Token::Punctuation(';') => {
-                        if parentheses_count != 0 || braces_count != 0 {
-                            return acc;
-                        }
-                        semicolon_count += 1;
-                        acc
-                    }
-                    _ => acc,
-                });
+                    semicolon_count += 1;
+                }
+                _ => continue,
+            };
+        }
 
         if let Some((idx, lowest)) = lowest_precedence {
             let (left, right) = expression.split_at(idx);
