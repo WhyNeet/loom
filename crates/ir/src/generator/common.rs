@@ -5,7 +5,7 @@ use inkwell::{
     values::{BasicValueEnum, PointerValue},
     AddressSpace,
 };
-use parser::ast::literal::Literal;
+use preprocessor::last::expression::Literal;
 
 pub struct VariableData<'ctx> {
     ptr: PointerValue<'ctx>,

@@ -7,7 +7,7 @@ use inkwell::{
     types::{BasicMetadataTypeEnum, BasicType},
     values::{BasicValueEnum, FunctionValue},
 };
-use parser::ast::{declaration::Declaration, unit::ASTUnit};
+use preprocessor::last::{declaration::Declaration, unit::LASTUnit, LoweredAbstractSyntaxTree};
 
 use super::{
     common::type_for,
@@ -37,25 +37,20 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
         }
     }
 
-    pub fn generate_from_ast(&self, ast: Rc<ASTUnit>) {
-        match ast.as_ref() {
-            ASTUnit::Block(root) => {
-                for unit in root {
-                    self.__generate_from_ast(Rc::clone(unit));
-                }
-            }
-            _ => panic!("expected root block"),
+    pub fn generate_from_ast(&self, ast: LoweredAbstractSyntaxTree) {
+        for unit in ast.root() {
+            self.__generate_from_ast(Rc::clone(unit));
         }
     }
 
-    fn __generate_from_ast(&self, unit: Rc<ASTUnit>) {
+    fn __generate_from_ast(&self, unit: Rc<LASTUnit>) {
         match unit.as_ref() {
-            ASTUnit::Declaration(decl) => match decl {
+            LASTUnit::Declaration(decl) => match decl {
                 Declaration::FunctionDeclaration {
+                    body,
                     identifier,
                     parameters,
                     return_type,
-                    expression,
                 } => {
                     let params = &parameters
                         .into_iter()
@@ -84,7 +79,7 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
                         Rc::clone(&self.function_stack),
                     );
                     unsafe { (&fn_gen as *const LLVMFunctionGenerator).as_ref().unwrap() }
-                        .generate_from_ast(Rc::clone(expression));
+                        .generate_from_ast(body.clone());
 
                     self.function_stack
                         .borrow_mut()

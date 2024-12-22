@@ -6,10 +6,9 @@ use inkwell::{
     values::{BasicMetadataValueEnum, BasicValueEnum},
     IntPredicate,
 };
-use parser::ast::{
+use preprocessor::last::{
     expression::Expression,
-    operation::{AlgebraicOperation, AssignmentOperation, LogicalOperation, Operation},
-    unit::ASTUnit,
+    operation::{AlgebraicOperation, LogicalOperation, Operation},
 };
 
 use super::{
@@ -65,30 +64,18 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
 
                 return Some(value);
             }
-            Expression::FunctionInvokation {
-                function_name,
-                parameters,
-            } => {
-                let params = parameters
+            Expression::FunctionInvokation { args, name } => {
+                let params = args
                     .into_iter()
                     .enumerate()
-                    .map(|(idx, param)| {
-                        self.generate_from_ast(
-                            &format!("{idx}"),
-                            match *param {
-                                ASTUnit::Expression(ref expr) => expr,
-                                _ => unreachable!(),
-                            },
-                        )
-                        .unwrap()
-                    })
+                    .map(|(idx, param)| self.generate_from_ast(&format!("{idx}"), param).unwrap())
                     .map(|param| param.into())
                     .collect::<Vec<BasicMetadataValueEnum<'ctx>>>();
 
                 let instruct = self
                     .builder
                     .build_call(
-                        *self.function_stack.borrow().get(function_name).unwrap(),
+                        *self.function_stack.borrow().get(name).unwrap(),
                         &params,
                         store_in,
                     )
@@ -107,24 +94,12 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                         let right_store_in = format!("{store_in}_rhs");
 
                         let lhs = self
-                            .generate_from_ast(
-                                &left_store_in,
-                                match &(**left) {
-                                    ASTUnit::Expression(expr) => expr,
-                                    _ => todo!(),
-                                },
-                            )
+                            .generate_from_ast(&left_store_in, left)
                             .unwrap()
                             .into_int_value();
 
                         let rhs = self
-                            .generate_from_ast(
-                                &right_store_in,
-                                match &(**right) {
-                                    ASTUnit::Expression(expr) => expr,
-                                    _ => todo!(),
-                                },
-                            )
+                            .generate_from_ast(&right_store_in, right)
                             .unwrap()
                             .into_int_value();
                         Some(match alg {
@@ -142,26 +117,15 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                             }
                         })
                     }
-                    Operation::Assignment(assign) => {
+                    Operation::Assignment => {
                         let identifier = match &**left {
-                            ASTUnit::Expression(var_name) => match var_name {
-                                Expression::Identifier(ident) => ident,
-                                _ => unreachable!(),
-                            },
+                            Expression::Identifier(ident) => ident,
                             _ => unreachable!(),
                         };
 
                         let right_store_in = format!("{store_in}_rhs");
 
-                        let rhs = self
-                            .generate_from_ast(
-                                &right_store_in,
-                                match &(**right) {
-                                    ASTUnit::Expression(expr) => expr,
-                                    _ => todo!(),
-                                },
-                            )
-                            .unwrap();
+                        let rhs = self.generate_from_ast(&right_store_in, right).unwrap();
 
                         let lhs = self
                             .stack_frame
@@ -170,13 +134,7 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                             .unwrap()
                             .ptr();
 
-                        match assign {
-                            AssignmentOperation::Assign => self.builder.build_store(lhs, rhs),
-                            _ => {
-                                panic!("other assignment operators will be simplifed using parser")
-                            }
-                        }
-                        .unwrap();
+                        self.builder.build_store(lhs, rhs).unwrap();
 
                         None
                     }
@@ -186,24 +144,12 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                             let right_store_in = format!("{store_in}_rhs");
 
                             let lhs = self
-                                .generate_from_ast(
-                                    &left_store_in,
-                                    match &(**left) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&left_store_in, left)
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(
-                                    &right_store_in,
-                                    match &(**right) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&right_store_in, right)
                                 .unwrap()
                                 .into_int_value();
 
@@ -214,24 +160,12 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                             let right_store_in = format!("{store_in}_rhs");
 
                             let lhs = self
-                                .generate_from_ast(
-                                    &left_store_in,
-                                    match &(**left) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&left_store_in, left)
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(
-                                    &right_store_in,
-                                    match &(**right) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&right_store_in, right)
                                 .unwrap()
                                 .into_int_value();
 
@@ -242,24 +176,12 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                             let right_store_in = format!("{store_in}_rhs");
 
                             let lhs = self
-                                .generate_from_ast(
-                                    &left_store_in,
-                                    match &(**left) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&left_store_in, left)
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(
-                                    &right_store_in,
-                                    match &(**right) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&right_store_in, right)
                                 .unwrap()
                                 .into_int_value();
 
@@ -275,24 +197,12 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                             let right_store_in = format!("{store_in}_rhs");
 
                             let lhs = self
-                                .generate_from_ast(
-                                    &left_store_in,
-                                    match &(**left) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&left_store_in, left)
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(
-                                    &right_store_in,
-                                    match &(**right) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&right_store_in, right)
                                 .unwrap()
                                 .into_int_value();
 
@@ -308,24 +218,12 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                             let right_store_in = format!("{store_in}_rhs");
 
                             let lhs = self
-                                .generate_from_ast(
-                                    &left_store_in,
-                                    match &(**left) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&left_store_in, left)
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(
-                                    &right_store_in,
-                                    match &(**right) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&right_store_in, right)
                                 .unwrap()
                                 .into_int_value();
 
@@ -341,24 +239,12 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                             let right_store_in = format!("{store_in}_rhs");
 
                             let lhs = self
-                                .generate_from_ast(
-                                    &left_store_in,
-                                    match &(**left) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&left_store_in, left)
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(
-                                    &right_store_in,
-                                    match &(**right) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&right_store_in, right)
                                 .unwrap()
                                 .into_int_value();
 
@@ -374,24 +260,12 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                             let right_store_in = format!("{store_in}_rhs");
 
                             let lhs = self
-                                .generate_from_ast(
-                                    &left_store_in,
-                                    match &(**left) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&left_store_in, left)
                                 .unwrap()
                                 .into_int_value();
 
                             let rhs = self
-                                .generate_from_ast(
-                                    &right_store_in,
-                                    match &(**right) {
-                                        ASTUnit::Expression(expr) => expr,
-                                        _ => todo!(),
-                                    },
-                                )
+                                .generate_from_ast(&right_store_in, right)
                                 .unwrap()
                                 .into_int_value();
 

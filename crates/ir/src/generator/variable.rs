@@ -1,11 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use inkwell::{builder::Builder, context::Context};
-use parser::ast::{
-    declaration::{Declaration, VariableDeclarationKeyword},
-    expression::Expression,
-    unit::ASTUnit,
-};
+use preprocessor::last::{declaration::VariableAllocation, expression::Expression, unit::LASTUnit};
 
 use super::{
     common::VariableData,
@@ -44,36 +40,23 @@ impl<'ctx> LLVMVariableGenerator<'ctx> {
 
     pub fn generate_for_ast(
         &self,
-        keyword: &VariableDeclarationKeyword,
+        allocation: &VariableAllocation,
         identifier: &String,
-        expression: &'ctx ASTUnit,
+        expression: &'ctx Expression,
     ) {
         let var_type = self.context.i32_type();
 
-        let value = match expression {
-            ASTUnit::Expression(expr) => LLVMExpressionGenerator::new(
-                self.context,
-                self.builder,
-                Rc::clone(&self.stack_frame),
-                Rc::clone(&self.ssa),
-                Rc::clone(&self.function_stack),
-            )
-            .generate_from_ast(&format!("{identifier}_tmp"), expr),
-            ASTUnit::Block(block) => {
-                let store_in = format!("{}_block_res", identifier.as_str());
-
-                self.fn_gen.internal_generate_from_ast(
-                    Rc::new(ASTUnit::Block(block.clone())),
-                    Some(&store_in),
-                );
-
-                self.ssa.borrow().get(&store_in).map(|val| *val)
-            }
-            other => panic!("expected expression, got: {other:?}"),
-        }
+        let value = LLVMExpressionGenerator::new(
+            self.context,
+            self.builder,
+            Rc::clone(&self.stack_frame),
+            Rc::clone(&self.ssa),
+            Rc::clone(&self.function_stack),
+        )
+        .generate_from_ast(&format!("{identifier}_tmp"), expression)
         .unwrap();
 
-        if *keyword == VariableDeclarationKeyword::Let {
+        if *allocation == VariableAllocation::Stack {
             // mutable variable declaration
 
             let var = self

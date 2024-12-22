@@ -3,7 +3,7 @@ use inkwell::{
     context::Context,
     values::{BasicValueEnum, FunctionValue},
 };
-use parser::ast::{declaration::Declaration, statement::Statement, unit::ASTUnit};
+use preprocessor::last::{declaration::Declaration, statement::Statement, unit::LASTUnit};
 use std::{cell::RefCell, collections::HashMap, ptr, rc::Rc};
 
 use super::{
@@ -69,31 +69,30 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
         }
     }
 
-    pub fn generate_from_ast(&'ctx self, ast: Rc<ASTUnit>) {
+    pub fn generate_from_ast(&'ctx self, ast: Vec<Rc<LASTUnit>>) {
         self.internal_generate_from_ast(ast, None);
         if self.is_void {
             self.builder.build_return(None).unwrap();
         }
     }
 
-    pub fn internal_generate_from_ast(&'ctx self, ast: Rc<ASTUnit>, store_return: Option<&str>) {
-        let root = match unsafe { (ast.as_ref() as *const ASTUnit).as_ref().unwrap() } {
-            ASTUnit::Block(root) => root,
-            other => panic!("expected root block, got: {other:?}"),
-        };
+    pub fn internal_generate_from_ast(
+        &'ctx self,
+        ast: Vec<Rc<LASTUnit>>,
+        store_return: Option<&str>,
+    ) {
+        for idx in 0..ast.len() {
+            let unit = unsafe { (&ast[idx] as *const Rc<LASTUnit>).as_ref().unwrap() };
 
-        for idx in 0..root.len() {
-            let unit = &root[idx].as_ref();
-
-            match unit {
-                ASTUnit::Declaration(decl) => match decl {
+            match unit.as_ref() {
+                LASTUnit::Declaration(decl) => match decl {
                     Declaration::FunctionDeclaration { .. } => {
                         panic!("dont declare functions within functions pls")
                     }
                     Declaration::VariableDeclaration {
-                        keyword,
-                        identifier,
+                        allocation,
                         expression,
+                        identifier,
                     } => {
                         let var_gen = LLVMVariableGenerator::new(
                             self.context,
@@ -103,10 +102,10 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                             Rc::clone(&self.function_stack),
                             self,
                         );
-                        var_gen.generate_for_ast(&keyword, &identifier, &expression);
+                        var_gen.generate_for_ast(allocation, identifier, expression.as_ref());
                     }
                 },
-                ASTUnit::Expression(expr) => {
+                LASTUnit::Expression(expr) => {
                     self.expr_gen.generate_from_ast(
                         &format!(
                             "{}",
@@ -119,12 +118,12 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                         &expr,
                     );
                 }
-                ASTUnit::Statement(stmt) => {
-                    let remaining_instruct = root
+                LASTUnit::Statement(stmt) => {
+                    let remaining_instruct = ast
                         .iter()
                         .skip(idx + 1)
                         .map(|unit| Rc::clone(unit))
-                        .collect::<Vec<Rc<ASTUnit>>>();
+                        .collect::<Vec<Rc<LASTUnit>>>();
 
                     let stmt_gen = LLVMStatementGenerator::new(
                         self.context,
@@ -133,36 +132,9 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                         self,
                         self.function,
                     );
-                    if let Some(store_return) = store_return {
-                        match stmt {
-                            Statement::ImplicitReturn(ret) => match ret.as_ref() {
-                                ASTUnit::Expression(expr) => {
-                                    let value = self.expr_gen.generate_from_ast(store_return, expr);
-                                    if let Some(value) = value {
-                                        self.ssa
-                                            .borrow_mut()
-                                            .insert(store_return.to_string(), value);
-                                    }
-                                }
-                                ASTUnit::Block(block) => self.internal_generate_from_ast(
-                                    Rc::new(ASTUnit::Block(block.clone())),
-                                    Some(store_return),
-                                ),
-                                _ => unreachable!(),
-                            },
-                            stmt => stmt_gen.generate_from_ast(stmt, remaining_instruct),
-                        }
-                    } else {
-                        stmt_gen.generate_from_ast(stmt, remaining_instruct);
-                    }
+                    stmt_gen.generate_from_ast(stmt, remaining_instruct);
 
                     break;
-                }
-                ASTUnit::Block(block) => {
-                    self.internal_generate_from_ast(
-                        Rc::new(ASTUnit::Block(block.iter().map(Rc::clone).collect())),
-                        store_return,
-                    );
                 }
             }
         }
