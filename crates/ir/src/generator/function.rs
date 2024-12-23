@@ -16,7 +16,7 @@ pub type SSA<'ctx> = HashMap<String, BasicValueEnum<'ctx>>;
 
 pub struct LLVMFunctionGenerator<'ctx> {
     context: &'ctx Context,
-    builder: Builder<'ctx>,
+    builder: Rc<Builder<'ctx>>,
     stack_frame: Rc<RefCell<StackFrame<'ctx>>>,
     ssa: Rc<RefCell<SSA<'ctx>>>,
     function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
@@ -31,10 +31,9 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
         function: FunctionValue<'ctx>,
         param_names: &[&str],
         function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
+        builder: Rc<Builder<'ctx>>,
     ) -> Self {
         let entry = context.append_basic_block(function, "entry");
-
-        let builder = context.create_builder();
 
         builder.position_at_end(entry);
 
@@ -51,7 +50,7 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
 
         let expr_gen = LLVMExpressionGenerator::new(
             context,
-            unsafe { (&builder as *const Builder<'ctx>).as_ref().unwrap() },
+            Rc::clone(&builder),
             Rc::clone(&stack_frame),
             Rc::clone(&ssa),
             Rc::clone(&function_stack),
@@ -92,7 +91,7 @@ impl<'ctx> LLVMFunctionGenerator<'ctx> {
                     } => {
                         let var_gen = LLVMVariableGenerator::new(
                             self.context,
-                            &self.builder,
+                            Rc::clone(&self.builder),
                             Rc::clone(&self.stack_frame),
                             Rc::clone(&self.ssa),
                             Rc::clone(&self.function_stack),

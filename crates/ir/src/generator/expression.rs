@@ -18,7 +18,7 @@ use super::{
 };
 
 pub struct LLVMExpressionGenerator<'ctx> {
-    builder: &'ctx Builder<'ctx>,
+    builder: Rc<Builder<'ctx>>,
     context: &'ctx Context,
     stack_frame: Rc<RefCell<StackFrame<'ctx>>>,
     ssa: Rc<RefCell<SSA<'ctx>>>,
@@ -28,7 +28,7 @@ pub struct LLVMExpressionGenerator<'ctx> {
 impl<'ctx> LLVMExpressionGenerator<'ctx> {
     pub fn new(
         context: &'ctx Context,
-        builder: &'ctx Builder<'ctx>,
+        builder: Rc<Builder<'ctx>>,
         stack_frame: Rc<RefCell<StackFrame<'ctx>>>,
         ssa: Rc<RefCell<SSA<'ctx>>>,
         function_stack: Rc<RefCell<FunctionStack<'ctx>>>,
@@ -96,6 +96,8 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                 right,
                 operation,
             } => {
+                println!("binary expression: {operation:?}");
+
                 let op_res = match operation {
                     Operation::Algebraic(alg) => {
                         let lhs = self
@@ -160,6 +162,8 @@ impl<'ctx> LLVMExpressionGenerator<'ctx> {
                             .ptr();
 
                         self.builder.build_store(lhs, rhs).unwrap();
+
+                        println!("build store for: {identifier:?}");
 
                         None
                     }

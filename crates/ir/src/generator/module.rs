@@ -77,6 +77,7 @@ impl<'ctx> LLVMModuleGenerator<'ctx> {
                             .collect::<Vec<&str>>()
                             .as_slice(),
                         Rc::clone(&self.function_stack),
+                        Rc::new(self.context.create_builder()),
                     );
                     unsafe { (&fn_gen as *const LLVMFunctionGenerator).as_ref().unwrap() }
                         .generate_from_ast(body.clone());
