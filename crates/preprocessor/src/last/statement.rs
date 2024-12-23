@@ -10,6 +10,7 @@ pub enum Statement {
         alternative: Option<Vec<Rc<LASTUnit>>>,
     },
     Loop {
+        header: Vec<Rc<LASTUnit>>,
         condition: Rc<Expression>,
         body: Vec<Rc<LASTUnit>>,
     },

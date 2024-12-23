@@ -217,7 +217,7 @@ impl Preprocessor {
                 };
 
                 let condition_ssa_name = mangler.rng();
-                let mut condition_value = self.run_internal(
+                let condition_value = self.run_internal(
                     Rc::clone(condition),
                     mangler,
                     Some(condition_ssa_name.clone()),
@@ -225,11 +225,10 @@ impl Preprocessor {
                     remap,
                 );
 
-                last_units.append(&mut condition_value);
-
                 let body = self.run_internal(Rc::clone(body), mangler, None, Some(scope), remap);
 
                 LASTUnit::Statement(Statement::Loop {
+                    header: condition_value,
                     condition: Rc::new(Expression::Identifier(condition_ssa_name)),
                     body,
                 })

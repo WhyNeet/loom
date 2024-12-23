@@ -44,9 +44,11 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
                     .build_return(ret_value.as_ref().map(|val| val as &dyn BasicValue))
                     .unwrap();
             }
-            Statement::Loop { body, condition } => {
-                self.generate_loop(Rc::clone(condition), body.clone(), next)
-            }
+            Statement::Loop {
+                body,
+                condition,
+                header,
+            } => self.generate_loop(header.clone(), Rc::clone(condition), body.clone(), next),
             Statement::ControlFlow {
                 condition,
                 execute,
@@ -63,6 +65,7 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
 
     fn generate_loop(
         &self,
+        header: Vec<Rc<LASTUnit>>,
         condition: Rc<Expression>,
         body: Vec<Rc<LASTUnit>>,
         next: Vec<Rc<LASTUnit>>,
@@ -88,6 +91,9 @@ impl<'ctx> LLVMStatementGenerator<'ctx> {
         self.fn_gen.internal_generate_from_ast(next);
 
         self.builder.position_at_end(header_block);
+
+        self.fn_gen.internal_generate_from_ast(header);
+
         let cmp = self
             .expression_gen
             .generate_from_ast(
