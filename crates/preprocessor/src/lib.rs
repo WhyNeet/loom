@@ -6,7 +6,7 @@ use std::{borrow::Cow, collections::HashMap, rc::Rc};
 
 use last::{
     declaration::{Declaration, VariableAllocation},
-    expression::Expression,
+    expression::{self, Expression},
     operation::Operation,
     statement::Statement,
     unit::LASTUnit,
@@ -61,15 +61,7 @@ impl Preprocessor {
             }
             ASTUnit::Expression(expression) => self.run_expression(
                 expression,
-                match expression {
-                    parser::ast::expression::Expression::BinaryExpression { operation, .. } => {
-                        match operation {
-                            parser::ast::operation::Operation::Assignment(_) => None,
-                            _ => Some(store_result_in.unwrap_or_else(|| mangler.rng())),
-                        }
-                    }
-                    _ => Some(store_result_in.unwrap_or_else(|| mangler.rng())),
-                },
+                store_result_in.unwrap_or_else(|| mangler.rng()),
                 mangler,
                 remap,
             ),
@@ -286,7 +278,7 @@ impl Preprocessor {
 
                 let mut expression_result = match expression.as_ref() {
                     ASTUnit::Expression(expression) => {
-                        self.run_expression(expression, Some(ident_tmp.clone()), mangler, remap)
+                        self.run_expression(expression, ident_tmp.clone(), mangler, remap)
                     }
                     ASTUnit::Block(block) => {
                         self.run_block(block, mangler, Some(ident_tmp.clone()), scope, remap)
@@ -336,7 +328,7 @@ impl Preprocessor {
     fn run_expression(
         &self,
         expression: &parser::ast::expression::Expression,
-        identifier: Option<String>,
+        identifier: String,
         mangler: &Mangler,
         remap: Option<&Remapper>,
     ) -> Vec<Rc<LASTUnit>> {
@@ -344,7 +336,7 @@ impl Preprocessor {
 
         let expression_result = match expression {
             parser::ast::expression::Expression::Identifier(ident) => {
-                Expression::Identifier(if let Some(remap) = remap {
+                Some(Expression::Identifier(if let Some(remap) = remap {
                     if let Some(remapped) = remap.get_remapped(ident) {
                         remapped
                     } else {
@@ -352,10 +344,10 @@ impl Preprocessor {
                     }
                 } else {
                     ident.clone()
-                })
+                }))
             }
             parser::ast::expression::Expression::Literal(literal) => {
-                Expression::Literal(literal.clone())
+                Some(Expression::Literal(literal.clone()))
             }
             parser::ast::expression::Expression::FunctionInvokation {
                 function_name,
@@ -370,10 +362,10 @@ impl Preprocessor {
                 //   }
                 // }
 
-                Expression::FunctionInvokation {
+                Some(Expression::FunctionInvokation {
                     name: self.fn_mangler.mangle(Cow::Borrowed(function_name)),
                     args,
-                }
+                })
             }
             parser::ast::expression::Expression::BinaryExpression {
                 left,
@@ -387,23 +379,27 @@ impl Preprocessor {
                     };
                     let rhs_ssa_name = mangler.rng();
                     let mut rhs_expr =
-                        self.run_expression(rhs, Some(rhs_ssa_name.clone()), mangler, remap);
+                        self.run_expression(rhs, rhs_ssa_name.clone(), mangler, remap);
 
                     expression_units.append(&mut rhs_expr);
 
-                    Expression::BinaryExpression {
-                        left: Rc::new(Expression::Identifier(match left.as_ref() {
-                            ASTUnit::Expression(expr) => match expr {
-                                parser::ast::expression::Expression::Identifier(ident) => {
-                                    ident.to_string()
-                                }
+                    expression_units.push(Rc::new(LASTUnit::Expression(
+                        Expression::BinaryExpression {
+                            left: Rc::new(Expression::Identifier(match left.as_ref() {
+                                ASTUnit::Expression(expr) => match expr {
+                                    parser::ast::expression::Expression::Identifier(ident) => {
+                                        ident.to_string()
+                                    }
+                                    _ => unreachable!(),
+                                },
                                 _ => unreachable!(),
-                            },
-                            _ => unreachable!(),
-                        })),
-                        right: Rc::new(Expression::Identifier(rhs_ssa_name)),
-                        operation: Operation::Assignment,
-                    }
+                            })),
+                            right: Rc::new(Expression::Identifier(rhs_ssa_name)),
+                            operation: Operation::Assignment,
+                        },
+                    )));
+
+                    None
                 }
                 _ => {
                     let lhs = match left.as_ref() {
@@ -412,7 +408,7 @@ impl Preprocessor {
                     };
                     let lhs_ssa_name = mangler.rng();
                     let mut lhs_expr =
-                        self.run_expression(lhs, Some(lhs_ssa_name.clone()), mangler, remap);
+                        self.run_expression(lhs, lhs_ssa_name.clone(), mangler, remap);
 
                     let rhs = match right.as_ref() {
                         ASTUnit::Expression(expr) => expr,
@@ -420,12 +416,12 @@ impl Preprocessor {
                     };
                     let rhs_ssa_name = mangler.rng();
                     let mut rhs_expr =
-                        self.run_expression(rhs, Some(rhs_ssa_name.clone()), mangler, remap);
+                        self.run_expression(rhs, rhs_ssa_name.clone(), mangler, remap);
 
                     expression_units.append(&mut rhs_expr);
                     expression_units.append(&mut lhs_expr);
 
-                    Expression::BinaryExpression {
+                    Some(Expression::BinaryExpression {
                         left: Rc::new(Expression::Identifier(lhs_ssa_name)),
                         right: Rc::new(Expression::Identifier(rhs_ssa_name)),
                         operation: match operation {
@@ -433,16 +429,16 @@ impl Preprocessor {
                             | parser::ast::operation::Operation::Logical(_) => operation.into(),
                             parser::ast::operation::Operation::Assignment(assign) => unreachable!(),
                         },
-                    }
+                    })
                 }
             },
         };
 
-        if let Some(identifier) = identifier {
+        if let Some(expression) = expression_result {
             let result_ssa = LASTUnit::Declaration(Declaration::VariableDeclaration {
                 allocation: VariableAllocation::SSA,
                 identifier,
-                expression: Rc::new(expression_result),
+                expression: Rc::new(expression),
             });
 
             expression_units.push(Rc::new(result_ssa));
